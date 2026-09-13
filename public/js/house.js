@@ -40,7 +40,6 @@ function render(s) {
   const showing = st === 'SHOWING';
   const pre = ['FILLING', 'OPEN_CALL', 'DOORS_CLOSED'].includes(st);
   $('#pre').style.display = pre ? '' : 'none';
-  $('#chart-panel').style.display = pre ? '' : 'none';
   $('#showing').style.display = showing ? '' : 'none';
   $('#voting').style.display = st === 'VOTING' ? '' : 'none';
   $('#results').style.display = st === 'RESULTS' ? '' : 'none';
@@ -67,10 +66,6 @@ function render(s) {
 
 function renderPre(s) {
   const st = s.theater.state;
-  renderSeatMap($('#seatmap'), s.seatMap, `t${s.theater.number}`);
-  $('#mood').textContent = s.seatMap.mood;
-  const mine = $('.seat.you', $('#seatmap'));
-  if (mine) { mine.title = 'Your seat — tap for your stubs'; mine.onclick = () => { location.href = '/me'; }; }
   arrive();
 
   const actions = $('#pre-actions');
@@ -157,7 +152,7 @@ function arrive() {
   history.replaceState({}, '', '/house');
   const plate = $('#pre-plate');
   plate.classList.add('arriving');
-  toast('Your seat is the gold one on the chart.');
+  toast('Settle in.');
 }
 
 /* ---------------------------------------------------------------------------

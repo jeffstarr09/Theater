@@ -116,45 +116,6 @@ class Hall {
   emit(type, payload) { for (const fn of this.handlers[type] || []) fn(payload); }
 }
 
-/* =============================================================================
- * SEAT MAP
- * The server sends a grid of 1s and 0s plus your own seat. It does not send —
- * and cannot be asked for — how many of those seats hold real people.
- * ========================================================================== */
-function renderSeatMap(container, seatMap, houseKey = 'h') {
-  const sig = seatMap.rows.map((r) => r.length).join(',') + '|' + houseKey;
-  if (container.dataset.sig !== sig) {
-    container.dataset.sig = sig;
-    container.innerHTML = '';
-    let idx = 0;
-    for (const row of seatMap.rows) {
-      const rowEl = el('div', 'seat-row');
-      for (let c = 0; c < row.length; c++) {
-        const s = el('div', 'seat');
-        s.dataset.i = idx++;
-        rowEl.appendChild(s);
-      }
-      container.appendChild(rowEl);
-    }
-  }
-  const flat = seatMap.rows.flat();
-  $$('.seat', container).forEach((s, i) => {
-    const you = i === seatMap.youIndex;
-    s.className = 'seat' + (flat[i] ? ' taken' : '') + (you ? ' you' : '');
-    s.title = you ? 'You are here' : '';
-    // Somebody is sitting there. Whose head it is, nobody outside can tell.
-    const had = s.firstChild;
-    if (flat[i] && typeof Avatar !== 'undefined') {
-      if (!had || had.classList.contains('you') !== you) {
-        s.innerHTML = '';
-        s.appendChild(Avatar.seated(`${houseKey}:${i}`, you));
-      }
-    } else if (had) {
-      s.innerHTML = '';
-    }
-  });
-}
-
 /* ---------- chrome, of which there is deliberately almost none ----------
  * No menu bar: this is a building, not a website. Every page that isn't the
  * street gets a lit EXIT sign that takes you back outside, and the rest of

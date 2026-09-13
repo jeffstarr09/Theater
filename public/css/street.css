@@ -117,18 +117,6 @@
   background: radial-gradient(50% 100% at 50% 0%, rgba(255,214,140,.5), transparent 70%);
 }
 
-/* ---------- seated crowd (auditorium seat map) ---------- */
-.sitter {
-  position: absolute; left: 50%; bottom: 58%; transform: translateX(-50%);
-  width: 10px; height: 10px; border-radius: 50% 50% 40% 40%; background: var(--skin, #c98f5f);
-  box-shadow: 0 6px 0 -1px var(--coat, #4a3f6b), 0 0 0 1px rgba(0,0,0,.5),
-    inset 0 -2px 3px rgba(0,0,0,.35), inset 0 2px 2px rgba(255,255,255,.18);
-}
-.sitter.you { background: #fff3d8; box-shadow: 0 6px 0 -1px var(--gold), 0 0 0 1px rgba(0,0,0,.5), 0 0 14px rgba(232,192,125,.95); }
-.seat { position: relative; overflow: visible; }
-#aisle-walker { position: absolute; z-index: 9; bottom: auto; }
-.seatmap-stage { position: relative; }
-
 /* =============================================================================
  * THE AUDITORIUM — screening inside the painted house
  * Plate: licensed Adobe Stock vector of an audience facing a curtained screen,

@@ -44,7 +44,7 @@ There are exactly two ways in, and both of them walk you through those doors:
 Either way the camera pushes through the door — the whole front swells around the doorway, the
 light in it floods, the wipe takes over — and you come up inside the auditorium, the view settling
 into your seat, facing the screen. Before the show the screen shows the house slate and the
-countdown to curtain; the seating chart (your seat in gold) sits beside you in the sidebar.
+countdown to curtain, with the room's chat beside you.
 
 The building is the status display, so there is nothing else to read: the marquee says what is
 happening, the board between the doors counts down to curtain, the frames in the windows are the
@@ -61,7 +61,7 @@ There is no navigation bar — it made the place feel like a website. Everything
 | the auditorium | through the doors (buy a seat at the ticket window, hang a poster, or click the doors) |
 | the full submission form | the brass **SUBMISSIONS →** plaque under the ticket window |
 | the Hall of Fame | the pink neon **HALL OF FAME** sign on the building's flank |
-| your ticket stubs | the ticket tucked under the marquee at the left, or your gold seat on the chart |
+| your ticket stubs | the ticket tucked under the marquee at the left |
 | back outside | the lit green **EXIT** sign, top-left, on every page that isn't the street |
 
 ### Vibes
@@ -139,12 +139,12 @@ you can bend. Nothing else in the codebase carries a pacing constant.
 
 ## Fake fullness
 
-The seat map is theatre in itself. Real attendees are seated among ambient extras using the curve
-in `policy.js` (`fullness`) — five real people read as a mostly-full house. Every occupied seat
-grows the back of somebody's head, drawn identically whether that somebody is real or not; the
-only head you can pick out is your own, which is gold. The payload sent to browsers is a grid of
-occupied/empty plus your own seat index, so nothing in the API distinguishes a real patron from an
-extra and no raw attendance count is ever exposed.
+The house is never shown empty. Real attendees are seated among ambient extras using the curve in
+`policy.js` (`fullness`) — five real people read as a mostly-full house — and the attendee list in
+the auditorium is drawn from that mix, real names and extras shuffled together. The API ships a
+seat grid of occupied/empty plus your own seat index and nothing else, so nothing distinguishes a
+real patron from an extra and no raw attendance count is ever exposed. (The seat map itself is no
+longer drawn on screen; the data stays in the payload for the same reason.)
 
 ## How the sync works
 
@@ -176,7 +176,6 @@ server/
 public/
   street.html      ← out front: marquee, poster frames, box office, doors
   house.html       ← the auditorium: countdown, screening, ballot, verdict
-  js/avatar.js     ← seated-crowd figures for the seating chart
   js/slate.js      ← procedural films, title cards and poster art
   art/             ← the licensed scene plates
   …                ← submit, hall of fame, profile, moderation desk
