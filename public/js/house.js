@@ -69,6 +69,8 @@ function render(s) {
 function renderPre(s) {
   const st = s.theater.state;
   renderSeatMap($('#seatmap'), s.seatMap, `t${s.theater.number}`);
+  const mine = $('.seat.you', $('#seatmap'));
+  if (mine) { mine.title = 'Your seat — tap for your stubs'; mine.onclick = () => { location.href = '/me'; }; }
   arrivalWalk(s);
   $('#mood').textContent = s.seatMap.mood;
   const actions = $('#pre-actions');

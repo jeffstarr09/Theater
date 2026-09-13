@@ -50,6 +50,27 @@ programme, the shutter comes down over the kiosk when the doors close, and light
 pavement while a film is running. During the screening the film plays inside the painted screen
 of an illustrated auditorium, with roses and tomatoes flying over the audience in front of it.
 
+### No menu
+
+There is no navigation bar — it made the place feel like a website. Everything is painted on:
+
+| To get to… | Do this |
+|---|---|
+| the auditorium | walk through the doors (buy a seat or hang a poster, or click the doors) |
+| the full submission form | the brass **SUBMISSIONS →** plaque under the board |
+| the Hall of Fame | the pink neon **HALL OF FAME** sign on the building's flank |
+| your ticket stubs | tap your own figure on the pavement, or your gold seat inside |
+| back outside | the lit green **EXIT** sign, top-left, on every page that isn't the street |
+
+### Vibes
+
+The psychedelia has a dial — three dots on the box office kiosk: *house lights*, *trippy*
+(default) and *cosmic*. It drives one CSS variable, `--trip`, which scales every effect: the aurora
+blended into the sky over the building, the bulbs chasing through the spectrum, the split-colour
+marquee lettering, the door light and the wet-pavement reflections cycling hue, the nebulae behind
+the page, and inside, the hue-drift on the curtains and the prismatic projector beam. The picture
+itself is never touched — the drift layer sits beneath it. The setting is remembered per browser.
+
 ## The art
 
 The scene plates and the walking figure are licensed Adobe Stock vector illustrations (free

@@ -155,24 +155,36 @@ function renderSeatMap(container, seatMap, houseKey = 'h') {
   });
 }
 
-/* ---------- chrome ---------- */
+/* ---------- chrome, of which there is deliberately almost none ----------
+ * No menu bar: this is a building, not a website. Every page that isn't the
+ * street gets a lit EXIT sign that takes you back outside, and the rest of
+ * the way-finding is painted onto the scene itself (doors, windows, the neon
+ * sign, your own figure). */
 function mountChrome(active) {
-  const header = el('header', 'top');
-  header.innerHTML = `
-    <a class="brand" href="/">
-      <span class="bulbs"><i class="bulb"></i><i class="bulb"></i><i class="bulb"></i><i class="bulb"></i><i class="bulb"></i></span>
-      <h1>The Theater</h1>
-    </a>
-    <nav class="top-nav">
-      <a href="/" data-k="street">Outside</a>
-      <a href="/house" data-k="house">Auditorium</a>
-      <a href="/submit" data-k="submit">Submit a film</a>
-      <a href="/hall" data-k="hall">Hall of Fame</a>
-      <a href="/me" data-k="me">Your stubs</a>
-    </nav>`;
-  document.body.prepend(header);
-  const on = header.querySelector(`[data-k="${active}"]`);
-  if (on) on.classList.add('on');
+  applyVibe();
+  if (active === 'street') return;
+  const exit = el('a', 'exit-sign');
+  exit.href = '/';
+  exit.title = 'Back to the street';
+  exit.innerHTML = '<i class="runner"></i><span>EXIT</span><small>to the street</small>';
+  document.body.prepend(exit);
+}
+
+/* ---------- vibes: how far the psychedelia is turned up ----------
+ * 0 = house lights, 1 = normal, 2 = all the way. Remembered per browser and
+ * set from the dial on the box office kiosk. */
+const VIBES = ['calm', 'trippy', 'cosmic'];
+function getVibe() {
+  try { const v = Number(localStorage.getItem('theater_vibe')); return Number.isFinite(v) && v >= 0 && v < 3 ? v : 1; }
+  catch { return 1; }
+}
+function applyVibe(level = getVibe()) {
+  document.documentElement.dataset.vibe = VIBES[level];
+  document.documentElement.style.setProperty('--trip', [0.35, 1, 1.7][level]);
+}
+function setVibe(level) {
+  try { localStorage.setItem('theater_vibe', String(level)); } catch {}
+  applyVibe(level);
 }
 
 function marqueeText(state) {

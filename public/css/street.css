@@ -263,3 +263,115 @@
 .house-plate .tally { position: absolute; left: 16px; top: 10px; z-index: 6; margin: 0; color: #ffe9c0; text-shadow: 0 2px 8px #000; justify-content: flex-start; }
 .house-plate .projectile { font-size: 34px; }
 .grid.showing { grid-template-columns: 1fr; }
+
+/* =============================================================================
+ * PSYCHEDELIC SPIN — outside
+ * ========================================================================== */
+/* the sky over the building runs an aurora, blended into the painting */
+.stage .dusk {
+  background:
+    linear-gradient(180deg, rgba(8,4,14,.5) 0%, rgba(8,4,14,.12) 35%, transparent 60%);
+}
+.stage .aurora {
+  position: absolute; inset: 0; pointer-events: none; mix-blend-mode: color;
+  opacity: calc(.85 * var(--trip));
+  background: linear-gradient(115deg, #ff2fa0, #7b2fff 22%, #2fd6ff 45%, #2fff9a 62%, #ffe02f 80%, #ff2fa0);
+  background-size: 300% 300%;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 34%, transparent 58%);
+          mask-image: linear-gradient(180deg, #000 0%, #000 34%, transparent 58%);
+  animation: aurora calc(22s / var(--trip)) ease-in-out infinite alternate;
+}
+.stage .aurora.b {
+  mix-blend-mode: screen; opacity: calc(.28 * var(--trip));
+  background: linear-gradient(65deg, transparent 20%, rgba(255,111,183,.9) 40%, transparent 50%, rgba(127,212,255,.9) 65%, transparent 80%);
+  background-size: 250% 250%;
+  filter: blur(18px);
+  animation: aurora calc(14s / var(--trip)) linear infinite alternate-reverse;
+}
+@keyframes aurora { from { background-position: 0% 50%; } to { background-position: 100% 50%; } }
+
+/* the marquee: bulbs chase through the spectrum, the name splits into cyan/magenta */
+.sign::before { animation: bulbs 3.2s ease-in-out infinite, spectrum calc(9s / var(--trip)) linear infinite; }
+@keyframes spectrum { from { filter: drop-shadow(0 0 5px rgba(255,214,140,.9)) hue-rotate(0deg) } to { filter: drop-shadow(0 0 5px rgba(255,214,140,.9)) hue-rotate(360deg) } }
+.sign-name {
+  animation: aberrate calc(6s / var(--trip)) ease-in-out infinite alternate;
+}
+@keyframes aberrate {
+  from { text-shadow: 0 0 22px rgba(255,214,140,.6), -2px 0 rgba(255,47,160,calc(.7 * var(--trip))), 2px 0 rgba(47,214,255,calc(.7 * var(--trip))); }
+  to   { text-shadow: 0 0 22px rgba(255,214,140,.6), 2px 1px rgba(255,47,160,calc(.7 * var(--trip))), -2px -1px rgba(47,214,255,calc(.7 * var(--trip))); }
+}
+.sign-now { animation: neon-hum 4s ease-in-out infinite alternate; }
+@keyframes neon-hum { from { filter: brightness(1) } to { filter: brightness(1.35) } }
+
+/* the door light and the pavement breathe colour */
+.door.open .glow, .door:hover .glow { animation: glowcycle calc(8s / var(--trip)) linear infinite; }
+@keyframes glowcycle { from { filter: hue-rotate(0deg) } to { filter: hue-rotate(360deg) } }
+.sidewalk .puddle {              /* wet-pavement reflections of the marquee */
+  position: absolute; inset: 0; pointer-events: none; opacity: calc(.55 * var(--trip)); mix-blend-mode: screen;
+  background:
+    radial-gradient(45% 60% at 50% 0%, rgba(255,214,140,.35), transparent 70%),
+    linear-gradient(90deg, transparent, rgba(255,47,160,.28) 20%, rgba(123,47,255,.28) 40%, rgba(47,214,255,.28) 60%, rgba(47,255,154,.24) 80%, transparent);
+  background-size: 100% 100%, 300% 100%;
+  animation: aurora calc(16s / var(--trip)) linear infinite alternate;
+  -webkit-mask-image: repeating-linear-gradient(180deg, #000 0 2px, transparent 2px 5px);
+          mask-image: repeating-linear-gradient(180deg, #000 0 2px, transparent 2px 5px);
+}
+
+/* the neon HALL OF FAME sign on the building's flank */
+.neon {
+  position: absolute; left: 92.4%; top: 31%; width: 5.2%; height: 26%; z-index: 4;
+  display: flex; align-items: center; justify-content: center; text-decoration: none;
+  writing-mode: vertical-rl; text-orientation: mixed;
+  font-family: var(--mono); font-size: clamp(7px, 1.05vw, 13px); letter-spacing: .34em; text-transform: uppercase;
+  color: #fff; border: 2px solid rgba(255,111,183,.8); border-radius: 6px; background: rgba(20,8,20,.55);
+  text-shadow: 0 0 6px #ff6fb7, 0 0 14px #ff2fa0, 0 0 28px rgba(255,47,160,.8);
+  box-shadow: 0 0 12px rgba(255,47,160,.6), inset 0 0 12px rgba(255,47,160,.4);
+  animation: neon-flicker 9s infinite; transition: transform .2s;
+}
+.neon:hover { transform: scale(1.05); color: #fff; box-shadow: 0 0 26px rgba(255,47,160,.9), inset 0 0 14px rgba(255,47,160,.6); }
+@keyframes neon-flicker { 0%,87%,100% { opacity: 1 } 88% { opacity: .55 } 90% { opacity: 1 } 93% { opacity: .7 } 95% { opacity: 1 } }
+
+/* the little brass plaque under the board */
+.plaque {
+  position: absolute; left: 44.6%; top: 82.4%; width: 10.8%; height: 3.6%; z-index: 4; text-decoration: none;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(180deg, #d8b46a, #9a7a3c); color: #2a1c0c; border-radius: 2px;
+  font-family: var(--mono); font-size: clamp(5px, .62vw, 8px); letter-spacing: .22em; text-transform: uppercase;
+  box-shadow: 0 1px 0 rgba(255,255,255,.35) inset, 0 3px 8px rgba(0,0,0,.6);
+}
+.plaque:hover { filter: brightness(1.15); }
+
+/* you are clickable: that is where your stubs live */
+.avatar.you { cursor: pointer; }
+.avatar.you:hover .avatar-label { color: #fff; }
+.avatar.you .halo { animation: glowcycle calc(6s / var(--trip)) linear infinite; }
+
+/* the VIBES dial on the kiosk */
+.dial { margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 5px; }
+.dial b { font-family: var(--mono); font-size: 6.5px; letter-spacing: .2em; color: #b08c62; font-weight: 400; text-transform: uppercase; }
+.dial button {
+  width: 9px; height: 9px; border-radius: 50%; border: 1px solid #6a4d3a; background: #2a1c33; padding: 0; cursor: pointer;
+  transition: .15s;
+}
+.dial button.on { background: #ff6fb7; border-color: #fff; box-shadow: 0 0 8px #ff2fa0; }
+.dial button:nth-child(3).on { background: #ffd479; box-shadow: 0 0 8px #ffd479; }
+.dial button:nth-child(4).on { background: #7fd4ff; box-shadow: 0 0 10px #2fd6ff; }
+
+/* =============================================================================
+ * PSYCHEDELIC SPIN — inside
+ * ========================================================================== */
+.house-plate .trip {               /* between the painting and the picture, never over the film */
+  position: absolute; inset: 0; pointer-events: none; mix-blend-mode: hue; opacity: calc(.45 * var(--trip));
+  background: linear-gradient(120deg, #ff2fa0, #7b2fff 30%, #2fd6ff 55%, #ff2fa0 85%);
+  background-size: 300% 300%; animation: aurora calc(26s / var(--trip)) ease-in-out infinite alternate;
+}
+.house-plate .beam {
+  background: conic-gradient(from 180deg at 50% 0%, transparent 40%, rgba(255,47,160,.18) 45%, rgba(127,212,255,.18) 50%, rgba(255,224,47,.16) 55%, transparent 60%);
+  opacity: var(--trip); animation: beam calc(12s / var(--trip)) ease-in-out infinite alternate;
+}
+@keyframes beam { from { transform: translateX(-50%) rotate(-6deg) } to { transform: translateX(-50%) rotate(6deg) } }
+.house-plate .picture { box-shadow: 0 0 60px rgba(255,235,200,.25), 0 0 calc(90px * var(--trip)) rgba(255,111,183,calc(.35 * var(--trip))); }
+.seat.you { box-shadow: 0 0 14px #ffd479, 0 0 26px rgba(255,111,183,.8); cursor: pointer; }
+
+/* house lights: nearly everything off */
+:root[data-vibe="calm"] .stage .aurora.b, :root[data-vibe="calm"] .sidewalk .puddle { display: none; }

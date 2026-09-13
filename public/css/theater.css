@@ -318,3 +318,72 @@ table.stats td.num { font-family: var(--mono); color: var(--muted); text-align: 
 .center { text-align: center; }
 .muted { color: var(--muted); }
 .tiny { font-size: 11.5px; letter-spacing: .1em; }
+
+/* =============================================================================
+ * PSYCHEDELIC LAYER
+ * --trip scales every effect: 0.35 house lights, 1 normal, 1.7 cosmic.
+ * ========================================================================== */
+:root { --trip: 1; }
+
+/* the room outside the building: slow nebulae instead of a flat black */
+body::before {
+  background:
+    radial-gradient(900px 600px at 15% 10%, rgba(255,47,160,calc(.16 * var(--trip))), transparent 60%),
+    radial-gradient(800px 700px at 85% 25%, rgba(47,214,255,calc(.13 * var(--trip))), transparent 60%),
+    radial-gradient(1000px 700px at 50% 110%, rgba(123,47,255,calc(.22 * var(--trip))), transparent 60%),
+    radial-gradient(1200px 700px at 50% -10%, #2a0d16 0%, transparent 60%);
+  animation: nebula calc(40s / var(--trip)) ease-in-out infinite alternate;
+}
+@keyframes nebula {
+  from { transform: translate3d(-2%, -1%, 0) scale(1.02); }
+  to   { transform: translate3d(2%, 1.5%, 0) scale(1.06); }
+}
+
+/* panels get a prismatic hairline along the top and a faint coloured glow */
+.panel {
+  position: relative; border-color: #3a2636;
+  box-shadow: 0 20px 50px rgba(0,0,0,.45), 0 0 calc(40px * var(--trip)) rgba(123,47,255,calc(.12 * var(--trip)));
+}
+.panel::before {
+  content: ""; position: absolute; top: -1px; left: 14px; right: 14px; height: 1px; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255,111,183,.9), rgba(255,212,121,.9), rgba(127,212,255,.9), transparent);
+  opacity: calc(.6 + .4 * var(--trip));
+}
+.panel h2 {
+  background: linear-gradient(90deg, #ffd479, #ff6fb7 45%, #7fd4ff);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.marquee { border-color: #3a2636; box-shadow: inset 0 1px 0 rgba(255,111,183,.25), inset 0 -1px 0 rgba(127,212,255,.25); }
+.theater-no {
+  background: linear-gradient(90deg, #fff, #ffd479 40%, #ff6fb7);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.btn.primary { background: linear-gradient(120deg, #ff2f6d, #b12fbf 60%, #7b2fff); border-color: #ff6fb7; }
+.btn.primary:hover { background: linear-gradient(120deg, #ff4f85, #c93fd6 60%, #8f4fff); }
+.countdown { text-shadow: 0 0 30px rgba(232,192,125,.3), -2px 0 rgba(255,47,160,.55), 2px 0 rgba(47,214,255,.55); }
+.pill.live { background: linear-gradient(120deg, #ff2f6d, #7b2fff); border-color: #ff6fb7; }
+
+/* ---------- the EXIT sign: the only way-finding that isn't painted on ---------- */
+.exit-sign {
+  position: fixed; top: 14px; left: 16px; z-index: 50; text-decoration: none;
+  display: flex; align-items: center; gap: 9px; padding: 7px 12px 7px 9px; border-radius: 6px;
+  background: linear-gradient(180deg, #1a0f14, #0f0a0c); border: 1px solid #3a2630;
+  box-shadow: 0 0 22px rgba(120,255,140,calc(.35 * var(--trip))), inset 0 0 12px rgba(0,0,0,.6);
+  color: #9dffb0; font-family: var(--mono); letter-spacing: .28em; font-size: 12px; line-height: 1;
+  text-shadow: 0 0 10px rgba(120,255,140,.9); transition: .2s;
+}
+.exit-sign:hover { transform: translateY(-1px); box-shadow: 0 0 34px rgba(120,255,140,calc(.6 * var(--trip))); color: #fff; }
+.exit-sign small { display: block; letter-spacing: .14em; font-size: 8px; color: #5fbf74; margin-top: 3px; text-shadow: none; }
+.exit-sign span { display: block; }
+.exit-sign .runner {              /* the little running figure every exit sign has */
+  width: 14px; height: 18px; position: relative; flex: 0 0 auto;
+  background:
+    radial-gradient(circle at 50% 12%, #9dffb0 0 2.6px, transparent 3px),
+    linear-gradient(#9dffb0, #9dffb0) 50% 42% / 4px 7px no-repeat,
+    linear-gradient(-35deg, transparent 45%, #9dffb0 45% 55%, transparent 55%) 40% 78% / 10px 8px no-repeat,
+    linear-gradient(35deg, transparent 45%, #9dffb0 45% 55%, transparent 55%) 30% 50% / 9px 6px no-repeat;
+  filter: drop-shadow(0 0 4px rgba(120,255,140,.9));
+  animation: exit-flicker 7s infinite;
+}
+@keyframes exit-flicker { 0%,93%,100% { opacity: 1 } 94% { opacity: .4 } 96% { opacity: 1 } 98% { opacity: .6 } }
+@media (max-width: 700px) { .exit-sign { top: 8px; left: 8px; } }

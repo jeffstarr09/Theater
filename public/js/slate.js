@@ -148,6 +148,23 @@ const Slate = (() => {
         ctx.restore(); ctx.globalAlpha = 1;
         break;
       }
+      case 'kaleido': {
+        // Six mirrored wedges of drifting discs: a kaleidoscope, all from t.
+        ctx.save(); ctx.translate(w / 2, h / 2);
+        for (let k = 0; k < 6; k++) {
+          ctx.save(); ctx.rotate((k * Math.PI) / 3); if (k % 2) ctx.scale(1, -1);
+          for (let i = 0; i < 9; i++) {
+            const a = t * (0.2 + seeds[i] * 0.4) + seeds[i + 9] * 6.28;
+            const rad = (0.05 + seeds[i + 18] * 0.4) * h;
+            ctx.fillStyle = i % 3 === 0 ? hi : i % 3 === 1 ? mid : '#ffffff';
+            ctx.globalAlpha = 0.28 + seeds[i] * 0.4;
+            ctx.beginPath(); ctx.arc(Math.cos(a) * rad, Math.sin(a) * rad * 0.6, (6 + seeds[i + 27] * 22) * (h / 540), 0, 6.29); ctx.fill();
+          }
+          ctx.restore();
+        }
+        ctx.restore(); ctx.globalAlpha = 1;
+        break;
+      }
       case 'rain': {
         for (let i = 0; i < 70; i++) {
           const x = seeds[i % 40] * w + Math.sin(t * 0.3 + i) * 12;
@@ -187,12 +204,12 @@ const Slate = (() => {
 
   /* --- a poster for the frames out front ------------------------------- */
   const POSTER_PALETTES = [
-    ['#1a0f1f', '#ff5d73', '#ffd166'], ['#06171c', '#2ec4b6', '#e8f7ee'],
-    ['#1c1209', '#f4a261', '#e76f51'], ['#0b0f2b', '#8ecae6', '#ffb703'],
-    ['#180a0a', '#d62828', '#fcbf49'], ['#10131a', '#c8b6ff', '#ffd6ff'],
-    ['#0a1a12', '#95d5b2', '#f1faee'],
+    ['#1a0f1f', '#ff2fa0', '#ffe02f'], ['#06171c', '#2fd6ff', '#e8f7ee'],
+    ['#1c1209', '#ff7a2f', '#ffd166'], ['#0b0f2b', '#7b2fff', '#2fd6ff'],
+    ['#180a0a', '#ff2f6d', '#fcbf49'], ['#10131a', '#c8b6ff', '#ff6fb7'],
+    ['#0a1a12', '#2fff9a', '#f1faee'],
   ];
-  const MOTIF_NAMES = ['grain', 'bars', 'iris', 'scan', 'orbit', 'rain'];
+  const MOTIF_NAMES = ['kaleido', 'bars', 'iris', 'scan', 'orbit', 'rain', 'kaleido'];
 
   function hash(str) {
     let h = 2166136261;
@@ -248,6 +265,18 @@ const Slate = (() => {
           ctx.fillRect(0, y, w, Math.max(1.5, h / 150));
         }
         break;
+      case 'kaleido': {
+        for (let k = 0; k < 6; k++) {
+          ctx.save(); ctx.translate(w / 2, h * 0.36); ctx.rotate((k * Math.PI) / 3); if (k % 2) ctx.scale(1, -1);
+          for (let i = 0; i < 7; i++) {
+            ctx.fillStyle = i % 3 === 0 ? hi : i % 3 === 1 ? mid : '#ffffff';
+            ctx.globalAlpha = 0.3 + r() * 0.5;
+            ctx.beginPath(); ctx.arc((0.05 + r() * 0.35) * w, (r() - 0.5) * w * 0.3, w * (0.02 + r() * 0.09), 0, 6.29); ctx.fill();
+          }
+          ctx.restore();
+        }
+        break;
+      }
       case 'orbit':
         for (let i = 0; i < 18; i++) {
           ctx.fillStyle = i % 3 ? mid : hi;

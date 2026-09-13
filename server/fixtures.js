@@ -29,15 +29,15 @@ const BLURBS = [
 ];
 
 const PALETTES = [
-  ['#1a0f1f', '#ff5d73', '#ffd166'],
-  ['#06171c', '#2ec4b6', '#e8f7ee'],
-  ['#1c1209', '#f4a261', '#e76f51'],
-  ['#0b0f2b', '#8ecae6', '#ffb703'],
-  ['#180a0a', '#d62828', '#fcbf49'],
-  ['#10131a', '#c8b6ff', '#ffd6ff'],
-  ['#0a1a12', '#95d5b2', '#f1faee'],
+  ['#1a0f1f', '#ff2fa0', '#ffe02f'],
+  ['#06171c', '#2fd6ff', '#e8f7ee'],
+  ['#1c1209', '#ff7a2f', '#ffd166'],
+  ['#0b0f2b', '#7b2fff', '#2fd6ff'],
+  ['#180a0a', '#ff2f6d', '#fcbf49'],
+  ['#10131a', '#c8b6ff', '#ff6fb7'],
+  ['#0a1a12', '#2fff9a', '#f1faee'],
 ];
-const MOTIFS = ['grain', 'bars', 'iris', 'scan', 'orbit', 'rain'];
+const MOTIFS = ['kaleido', 'bars', 'iris', 'scan', 'orbit', 'rain', 'kaleido'];
 
 const CHAT_LINES = [
   'first', 'the house lights are down', 'oh this is going to be good', 'who brought roses',

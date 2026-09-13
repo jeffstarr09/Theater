@@ -158,7 +158,8 @@ function renderBoxOffice(s) {
   $('#k-price').textContent = `$${(s.prices.audienceCents / 100).toFixed(2)}`;
   bo.classList.toggle('closed', !open);
   $('#k-note').textContent = ticket ? 'you have a ticket' : open ? 'one seat, please' : 'window closed';
-  bo.onclick = () => {
+  bo.onclick = (e) => {
+    if (e.target.closest('.dial')) return;            // the dial is not the window
     if (!open) return toast('The window is shut for this one. The next house opens shortly.');
     if (ticket) return toast('You are already holding a ticket. Walk in.');
     checkout(s);
@@ -196,11 +197,13 @@ function renderSidewalk(s) {
   if (!you) {
     you = Avatar.make(s.you.id || 'you', { you: true, label: 'you', scale: 0.78 });
     you.style.left = `${(walk.clientWidth || 900) * 0.5 - 19}px`;
+    you.title = 'Your stubs';
+    you.onclick = () => { if (!entering) location.href = '/me'; };
     walk.appendChild(you);
   }
   $('#street-note').textContent = s.you.ticket
     ? 'ticket in hand — the doors are open to you'
-    : 'you are standing on the sidewalk';
+    : 'you are standing on the sidewalk · tap yourself for your stubs';
 }
 window.addEventListener('resize', () => { crowdSeed = null; if (S) renderSidewalk(S); });
 
@@ -401,3 +404,18 @@ document.addEventListener('drop', (e) => {
     offerFilm(file, $('.poster-frame.empty'));
   }
 });
+
+/* ---------- the vibes dial on the kiosk ---------- */
+function renderDial() {
+  const v = getVibe();
+  $$('#dial button').forEach((b) => b.classList.toggle('on', Number(b.dataset.v) === v));
+}
+$$('#dial button').forEach((b) => {
+  b.onclick = (e) => {
+    e.stopPropagation();
+    setVibe(Number(b.dataset.v));
+    renderDial();
+    toast(['House lights up.', 'Trippy.', 'Cosmic. Mind the curb.'][Number(b.dataset.v)]);
+  };
+});
+renderDial();
