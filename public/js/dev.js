@@ -37,6 +37,12 @@
       ['Crown winner', { path: '/api/dev/close-ballot' }],
       ['Next theater', { path: '/api/dev/next-theater' }],
     ]],
+    ['Mode', [
+      ['Nightly', { path: '/api/dev/mode', body: { mode: 'nightly' } }],
+      ['Lobby', { path: '/api/dev/mode', body: { mode: 'lobby' } }],
+      ['Auto', { path: '/api/dev/mode', body: { mode: 'auto' } }],
+      ['Pool +3 films +6', { path: '/api/dev/pool', body: { films: 3, patrons: 6 } }],
+    ]],
     ['House Manager', [
       ['Guaranteed in 60s', { path: '/api/dev/guaranteed', body: { seconds: 60 } }],
       ['Traffic: dark', { path: '/api/dev/traffic', body: { level: 'dark' } }],
@@ -86,18 +92,21 @@
     try {
       const s = await api('/api/dev/status');
       const mins = (ms) => `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`;
+      const o = s.outcomes || {};
       $('#dev-readout').innerHTML =
-        kv('theater', `#${s.theaterId} ${s.state}`) +
+        kv('mode', `${s.mode}${s.modeOverride ? ' (forced)' : s.modeSelect === 'auto' ? ' (auto)' : ''}`) +
+        kv('rooms', s.rooms.map((r) => `#${r.id} ${r.state.toLowerCase()}`).join(', ') || '—') +
+        kv('pool', `${s.pool.films}f · ${s.pool.audience}a · ${s.pool.filmmakers}fm · oldest ${mins(s.pool.oldestWaitMs)}`) +
+        kv('lobby knobs', `${s.pool.knobs.filmsToStart}f/${s.pool.knobs.audienceToStart}a · wait ≤${s.pool.knobs.maxWaitMinutes}m · lobby ${s.pool.knobs.lobbySeconds}s · ≤${s.pool.knobs.maxRooms} rooms`) +
+        kv('outcomes', o.rooms ? `${o.rooms} rooms · attend ${Math.round(o.attendanceRate * 100)}% · wait ${o.avgWaitMin}m · ballots/att ${o.ballotsPerAttendee}` : 'none yet') +
+        kv('theater', `#${s.theaterId ?? '—'} ${s.state}`) +
         kv('tier', `${s.demand.tier}`) +
         kv('tickets/hr', s.demand.ticketsPerHour.toFixed(1)) +
         kv('subs/hr', s.demand.submissionsPerHour.toFixed(1)) +
         kv('attendance', `${Math.round(s.demand.attendanceRate * 100)}%`) +
         kv('planned seats', s.plan.seats) +
         kv('film slots', s.plan.filmSlots) +
-        kv('needs films', `${s.have.films} / ${s.effective.minFilms}`) +
-        kv('needs seats', `${s.have.tickets} / ${s.effective.seatsNeeded}`) +
-        kv('stall decay', `${s.decaySteps} step(s)`) +
-        kv('quiet for', mins(s.quietForMs)) +
+        (s.have ? kv('needs films', `${s.have.films} / ${s.effective.minFilms}`) + kv('needs seats', `${s.have.tickets} / ${s.effective.seatsNeeded}`) + kv('stall decay', `${s.decaySteps} step(s)`) + kv('quiet for', mins(s.quietForMs)) : '') +
         kv('countdown', `${Math.round(s.plan.countdownMinutes)} min`) +
         kv('next guaranteed', s.nextGuaranteed ? new Date(s.nextGuaranteed.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '—') +
         kv('admin key', s.adminKey);

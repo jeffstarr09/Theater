@@ -105,6 +105,8 @@ Click **DEV** (bottom right, or press <kbd>D</kbd>) on any page.
 
 Also worth pressing:
 
+- **Nightly / Lobby / Auto** and **Pool +3 films +6** — force a mode, then drop films and patrons
+  into the pool and watch rooms form around them (several at once, when the cap allows).
 - **Guaranteed in 60s** — schedules a guaranteed showtime a minute out. If nothing has been
   submitted, the House Manager pulls a House Selection short from the reserve so the show still
   happens.
@@ -113,6 +115,48 @@ Also worth pressing:
 
 Open a second browser window on `/house` during a screening to see the sync — both are driven by
 the server's clock, and a window opened late drops straight into the middle of the film.
+
+## Two modes, one machine
+
+The House Manager runs in one of two modes (`policy.modes`):
+
+- **nightly** — one house at a time. It fills, or fires at the guaranteed showtime, and screens
+  whatever it has. Right for a thin pool: this is how you launch.
+- **lobby** — a matchmaker. Buying a seat or dropping a film puts you in a *pool*, not a room.
+  Whenever the pool holds enough approved films and waiting audience, a room forms around whoever
+  was ready, counts down a short lobby (60–90s, so everyone's video buffers and the first frame
+  lands at the same second), and starts. Rooms overlap; who you land with is whoever was there.
+  Nobody waits past a max-wait ceiling — a single film alone still gets its screening.
+- **auto** (default) — nightly until tickets/hour crosses `lobbyAt`, lobby above it, with
+  hysteresis. Switching moves everyone and loses nobody: the filling house dissolves into the
+  pool, or the pool drains into a fresh house.
+
+Nightly is just lobby with one room and long waits; the knobs that differ (films and audience to
+start, max wait, lobby length, concurrent rooms) are curves in `policy.js`. Every room records an
+**outcome** — wait to first frame, lobby length, attendance, ballots, reactions — and the DEV panel
+and moderation desk show the running averages, so the cadence gets tuned from data rather than
+guesses. Inside, before a room forms, the painted screen reads *Finding you a house* with the
+pool's progress; the moment one forms it becomes that room's countdown.
+
+## The wallet
+
+A seat costs one credit. Credits are bought at the ticket window, by card or in bitcoin, into a
+pocket that shows on your profile:
+
+| Bundle | Price | Card fees (Stripe-style 2.9% + 30¢) |
+|---|---|---|
+| One seat | $1 | ~33% |
+| Five seats *(featured)* | $5 | ~9% |
+| A dozen seats | $10 | ~6% |
+
+The $1 seat stays on the menu because it is the honest price on the sign; the bundles carry the
+emphasis because a $1 card charge is uneconomic. **Bitcoin is over Lightning**, never on-chain —
+Lightning fees are a fraction of a cent, which makes it the cheapest rail for exactly this
+product. Both rails are stubs here (any card-shaped number; a fake BOLT11 you settle with a
+button), but `server/payments.js` is shaped for real providers: card credits on a webhook, and the
+Lightning side includes a BTCPay Server adapter (`LIGHTNING_PROVIDER=btcpay` plus `BTCPAY_URL`,
+`BTCPAY_STORE`, `BTCPAY_API_KEY`, `BTCPAY_WEBHOOK_SECRET`; point an *InvoiceSettled* webhook at
+`POST /webhooks/lightning`). Settlement credits a purchase exactly once whichever way it arrives.
 
 ## The House Manager
 
@@ -184,8 +228,8 @@ assets/demo/       ← three short clips used to seed real video
 
 ## Notes on the stubs
 
-- **Payments are fake.** The $1 audience ticket opens a stub checkout that accepts any card-shaped
-  number, charges nothing and stores nothing.
+- **Payments are fake.** Card and Lightning both credit the wallet without money moving; see
+  *The wallet* above for what a real provider needs.
 - **Encore** is a deliberate placeholder: the button on a Hall of Fame card returns "not yet on
   sale" and does nothing else.
 - **Moderation** is protected by a single shared key (`ADMIN_KEY`, default `popcorn`), which is

@@ -49,6 +49,7 @@ function dayAndTime(ts) {
 }
 
 const STATE_COPY = {
+  MATCHING:     { label: 'Finding a house', pill: 'warn', line: 'You are in the pool. A room forms the moment enough films and people are ready.' },
   OPEN_CALL:    { label: 'Open call',   pill: 'warn', line: 'The house is taking submissions. The doors stay open until there is a programme.' },
   FILLING:      { label: 'Filling',     pill: '',     line: 'Tickets are on sale. When the house is ready, the doors close and the clock starts.' },
   DOORS_CLOSED: { label: 'Doors closed',pill: 'warn', line: 'No more tickets for this one. Showtime is set.' },

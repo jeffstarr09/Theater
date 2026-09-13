@@ -5,6 +5,9 @@ const STATUS = { pending: 'at the desk', approved: 'in the programme', rejected:
 
 function render(p) {
   $('#handle').textContent = p.user.handle;
+  const w = p.wallet || { credits: 0, purchases: [] };
+  $('#wallet').innerHTML = `<p class="theater-no" style="font-size:28px">${w.credits} seat${w.credits === 1 ? '' : 's'} in your pocket</p>` +
+    (w.purchases.length ? `<ul class="film-list">${w.purchases.map((x) => `<li><span class="film-no">${x.rail === 'lightning' ? '⚡' : x.rail === 'comp' ? '🎁' : '💳'}</span><div><span class="film-title">${x.credits} seat${x.credits === 1 ? '' : 's'}</span><div class="film-by">${x.status} · ${x.rail === 'lightning' ? `${x.sats} sats` : `$${(x.amount_cents / 100).toFixed(2)}`} · ${dayAndTime(x.created_at)}</div></div></li>`).join('')}</ul>` : '<p class="lede tiny">Nothing bought yet. The window is out front.</p>');
   $('#counters').innerHTML = `
     <span>🎟 ${p.stubs.length} theaters</span>
     <span>🎞 ${p.films.length} films</span>

@@ -24,6 +24,7 @@ hall.on('transition', (t) => {
  * THE FACADE
  * ------------------------------------------------------------------------ */
 const SIGN = {
+  MATCHING:     ['FINDING YOU A HOUSE', 'filling'],
   OPEN_CALL:    ['OPEN CALL', 'filling'],
   FILLING:      ['NOW FILLING', 'filling'],
   DOORS_CLOSED: ['DOORS CLOSED', ''],
@@ -35,7 +36,7 @@ const SIGN = {
 function render(s) {
   const st = s.theater.state;
   const [word, cls] = SIGN[st] || SIGN.FILLING;
-  $('#sign-now').textContent = `${word} · THEATER #${s.theater.number}`;
+  $('#sign-now').textContent = s.theater.number ? `${word} · THEATER #${s.theater.number}` : word;
   $('#sign-now').className = 'sign-now ' + cls;
   renderSignWhen(s);
   renderPosters(s);
@@ -56,6 +57,11 @@ function renderSignWhen(s) {
     };
     tick();
     window._signTimer = setInterval(tick, 250);
+  } else if (s.theater.state === 'MATCHING') {
+    const m = s.matching;
+    node.innerHTML = `<span class="sign-clock">${m.filmsReady}/${m.filmsToStart}</span> films ready` +
+      (m.roomsRunning ? ` · <span class="sign-clock">${m.roomsRunning}</span> room${m.roomsRunning === 1 ? '' : 's'} running` : '') +
+      ` · starts within <span class="sign-clock">${m.maxWaitMinutes} min</span>`;
   } else if (s.theater.state === 'SHOWING') {
     node.innerHTML = 'In progress — <span class="sign-clock">walk in late, it does not wait</span>';
   } else if (s.marquee) {
@@ -74,7 +80,7 @@ function renderPosters(s) {
     filmId: e.filmId, title: e.title, by: e.by, order: e.order, slate: e.slate,
   })) : s.programme.map((p) => ({ filmId: p.id, title: p.title, by: p.by, order: p.order }));
 
-  const open = ['FILLING', 'OPEN_CALL'].includes(s.theater.state);
+  const open = ['FILLING', 'OPEN_CALL', 'MATCHING'].includes(s.theater.state);
   const mine = s.you.submission;
   const pending = mine && mine.status === 'pending' ? mine : null;
   const slots = Math.max(s.slots.total, entries.length + (open ? 1 : 0));
@@ -128,16 +134,30 @@ function emptyFrame() {
 /* ---------- the ticket window between the doors ---------- */
 function renderBooth(s) {
   const bo = $('#booth');
-  const open = ['FILLING', 'OPEN_CALL'].includes(s.theater.state);
+  const open = ['FILLING', 'OPEN_CALL', 'MATCHING'].includes(s.theater.state);
   const ticket = s.you.ticket;
-  $('#b-price').textContent = `$${(s.prices.audienceCents / 100).toFixed(2)}`;
+  const credits = s.you.credits || 0;
+  $('#b-price').textContent = credits > 0 ? `${credits} seat${credits === 1 ? '' : 's'}` : `$${(s.prices.audienceCents / 100).toFixed(2)}`;
   bo.classList.toggle('closed', !open);
-  $('#b-note').textContent = ticket ? 'you hold a ticket' : open ? 'one seat, please' : 'window closed';
+  $('#b-note').textContent = ticket ? 'you hold a ticket' : credits > 0 ? 'in your pocket · tap to sit' : open ? 'one seat, please' : 'window closed';
   bo.onclick = () => {
     if (!open) return toast('The window is shut for this one. The next house opens shortly.');
     if (ticket) return toast('You are already holding a ticket. Go on in.');
-    checkout(s);
+    if (credits > 0) return takeSeat();
+    wallet(s);
   };
+}
+
+/** Spend a credit on a seat and go in. */
+async function takeSeat() {
+  try {
+    const out = await api('/api/tickets/audience', { method: 'POST', body: {} });
+    if (out.already) return enterTheater('to your seat', $('#door-r'));
+    enterTheater(out.pool ? 'a house is forming' : 'enjoy the show', $('#door-r'));
+  } catch (e) {
+    if (/pocket/i.test(e.message) && S) return wallet(S);
+    toast(e.message, true);
+  }
 }
 
 /* ---------- the doors ---------- */
@@ -152,7 +172,7 @@ function renderEntrance(s) {
   }
   $('#door-label').textContent = showing
     ? (ticket ? 'in progress — go in' : 'in progress — watch from the back')
-    : ticket ? 'this way to your seat' : 'ticket holders only';
+    : ticket ? (ticket.pool ? 'this way — a house is forming' : 'this way to your seat') : 'ticket holders only';
 }
 
 function renderBill(s) {
@@ -204,35 +224,79 @@ async function enterTheater(word = 'this way', door = null) {
 }
 
 /* =============================================================================
- * THE WINDOW — stub checkout. No money moves, no card is stored.
+ * THE WINDOW — seat credits, by card or over Lightning. Both rails are stubs
+ * until a provider is configured (see server/payments.js).
  * ========================================================================== */
-function checkout(s) {
+function wallet(s) {
+  const bundles = s.prices.bundles || [];
   const bg = el('div', 'modal-bg');
   const m = el('div', 'modal');
   m.innerHTML = `
-    <h3>One seat, Theater #${s.theater.number}</h3>
-    <p class="lede tiny">Stub checkout — nothing is charged and nothing is stored. Any
-      card-shaped number works.</p>
+    <h3>Seats</h3>
+    <p class="lede tiny">A seat is a dollar. Buy a few at once and the card fees stop eating the
+      ticket — or pay in bitcoin over Lightning, where they never did.</p>
+    <div class="bundles">${bundles.map((b) => `
+      <button class="bundle${b.featured ? ' featured' : ''}" data-b="${b.id}">
+        <b>${b.credits}</b><span>${b.label}</span><em>$${(b.cents / 100).toFixed(2)}${b.note ? ` · ${b.note}` : ''}</em>
+      </button>`).join('')}</div>
     <label>Card number</label>
     <input type="text" id="card" value="4242 4242 4242 4242" autocomplete="off">
     <div class="btn-row">
-      <button class="btn primary" id="pay">Pay $${(s.prices.audienceCents / 100).toFixed(2)} and go in</button>
+      <button class="btn primary" id="pay">Pay by card</button>
+      ${s.prices.lightning ? '<button class="btn" id="pay-ln">⚡ Pay in bitcoin</button>' : ''}
       <button class="btn ghost" id="cancel">Not tonight</button>
-    </div>`;
+    </div>
+    <div id="ln-box" class="hidden"></div>
+    <p class="lede tiny">Stub checkout — nothing is charged and nothing is stored.</p>`;
   bg.appendChild(m);
   document.body.appendChild(bg);
-  $('#cancel', m).onclick = () => bg.remove();
-  bg.onclick = (e) => { if (e.target === bg) bg.remove(); };
+  let chosen = (bundles.find((b) => b.featured) || bundles[0] || {}).id;
+  const pick = () => $$('.bundle', m).forEach((b) => b.classList.toggle('on', b.dataset.b === chosen));
+  $$('.bundle', m).forEach((b) => { b.onclick = () => { chosen = b.dataset.b; pick(); }; });
+  pick();
+  const close = () => bg.remove();
+  $('#cancel', m).onclick = close;
+  bg.onclick = (e) => { if (e.target === bg) close(); };
+
+  const done = async (credits) => {
+    close();
+    toast(`${credits} seat${credits === 1 ? '' : 's'} in your pocket.`);
+    takeSeat();
+  };
+
   $('#pay', m).onclick = async () => {
     $('#pay', m).disabled = true;
     try {
-      await api('/api/tickets/audience', { method: 'POST', body: { card: $('#card', m).value } });
-      bg.remove();
-      enterTheater('enjoy the show', $('#door-r'));
-    } catch (e) {
-      toast(e.message, true);
-      $('#pay', m).disabled = false;
-    }
+      const out = await api('/api/wallet/checkout', { method: 'POST', body: { bundle: chosen, card: $('#card', m).value } });
+      done(out.wallet.credits);
+    } catch (e) { toast(e.message, true); $('#pay', m).disabled = false; }
+  };
+
+  const ln = $('#pay-ln', m);
+  if (ln) ln.onclick = async () => {
+    ln.disabled = true;
+    try {
+      const { invoice } = await api('/api/wallet/lightning', { method: 'POST', body: { bundle: chosen } });
+      const box = $('#ln-box', m);
+      box.classList.remove('hidden');
+      box.innerHTML = `
+        <div class="ln">
+          <div class="ln-amt">⚡ ${invoice.sats.toLocaleString()} sats <small>for ${invoice.credits} seat${invoice.credits === 1 ? '' : 's'}</small></div>
+          <code class="ln-req">${invoice.paymentRequest}</code>
+          <div class="ln-status" id="ln-status">waiting for payment…</div>
+          ${invoice.provider === 'stub' ? '<button class="btn small" id="ln-sim">Simulate payment (stub)</button>' : ''}
+        </div>`;
+      const sim = $('#ln-sim', m);
+      if (sim) sim.onclick = async () => {
+        const out = await api(`/api/wallet/lightning/${invoice.purchaseId}/simulate`, { method: 'POST' });
+        done(out.wallet.credits);
+      };
+      const poll = setInterval(async () => {
+        if (!document.body.contains(bg)) return clearInterval(poll);
+        const st = await api(`/api/wallet/lightning/${invoice.purchaseId}`).catch(() => null);
+        if (st && st.status === 'paid') { clearInterval(poll); done(st.credits); }
+      }, 2500);
+    } catch (e) { toast(e.message, true); ln.disabled = false; }
   };
 }
 
@@ -347,7 +411,7 @@ document.addEventListener('drop', (e) => {
   e.preventDefault();
   if (e.target.closest('.poster-frame')) return;      // the frame handles its own
   const file = e.dataTransfer.files && e.dataTransfer.files[0];
-  if (file && S && ['FILLING', 'OPEN_CALL'].includes(S.theater.state)) {
+  if (file && S && ['FILLING', 'OPEN_CALL', 'MATCHING'].includes(S.theater.state)) {
     offerFilm(file, $('.poster-frame.empty'));
   }
 });

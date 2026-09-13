@@ -19,6 +19,7 @@ const MIN = 60000, HOUR = 3600000;
 
 function wipe() {
   db.exec(`
+    DELETE FROM outcomes; DELETE FROM purchases;
     DELETE FROM reactions; DELETE FROM votes; DELETE FROM chat; DELETE FROM tickets;
     DELETE FROM films; DELETE FROM events; DELETE FROM theaters; DELETE FROM users;
     DELETE FROM sqlite_sequence WHERE name IN ('theaters','events');

@@ -18,6 +18,13 @@ const PUBLIC = path.join(__dirname, '..', 'public');
 const app = express();
 app.disable('x-powered-by');
 app.use(cookieParser());
+/* Payment webhooks are verified against the raw body, so they bypass the JSON parser. */
+app.post('/webhooks/lightning', express.raw({ type: '*/*', limit: '256kb' }), (req, res) => {
+  try {
+    const p = require('./payments').handleWebhook(req.headers, req.body);
+    res.json({ ok: true, settled: p ? p.id : null });
+  } catch (e) { res.status(e.status || 400).json({ error: e.message }); }
+});
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false }));
 app.use(identify);                       // everyone gets a pseudonym on arrival

@@ -14,6 +14,7 @@ const { id } = require('./ids');
 const HM = require('./houseManager');
 const { publicState } = require('./state');
 const { makeFilm, makePatron, CHAT_LINES, rand } = require('./fixtures');
+const PAY = require('./payments');
 
 const ADMIN_KEY = process.env.ADMIN_KEY || 'popcorn';
 const DEV_ENABLED = process.env.THEATER_DEV !== 'off';
@@ -55,28 +56,76 @@ router.get('/api/chat', (req, res) => {
 });
 
 /* ===========================================================================
- * TICKETS — payments are stubbed. Nothing is charged, nothing is stored.
+ * TICKETS — one seat costs one credit. Credits come from the wallet below.
  * ========================================================================= */
-router.post('/api/tickets/audience', (req, res) => {
+const OPEN_STATES = ['FILLING', 'OPEN_CALL'];
+
+/** Where a new seat goes right now: the filling house (nightly) or the pool (lobby). */
+function seatSomeone(userId, kind, source, paidCents) {
+  if (HM.mode() === 'lobby') return HM.grantPoolTicket(userId, kind, source, paidCents);
   const th = HM.ensureTheater();
-  if (!['FILLING', 'OPEN_CALL'].includes(th.state)) {
-    return bad(res, 409, 'The doors on this one are already closed. Hold for the next house.');
+  if (!OPEN_STATES.includes(th.state)) return null;
+  return HM.grantTicket(th.id, userId, kind, source, paidCents);
+}
+
+router.post('/api/tickets/audience', (req, res) => {
+  const room = HM.roomFor(req.user.id);
+  if (room && ['DOORS_CLOSED', 'SHOWING', 'VOTING', 'RESULTS'].includes(room.state)
+      && db.prepare('SELECT 1 FROM tickets WHERE theater_id = ? AND user_id = ?').get(room.id, req.user.id)) {
+    return res.json({ ok: true, already: true });
   }
-  const existing = db.prepare('SELECT * FROM tickets WHERE theater_id = ? AND user_id = ?').get(th.id, req.user.id);
-  if (existing) return res.json({ ok: true, already: true, ticket: existing });
+  if (HM.mode() === 'nightly') {
+    const th = HM.ensureTheater();
+    if (!OPEN_STATES.includes(th.state)) return bad(res, 409, 'The doors on this one are already closed. Hold for the next house.');
+    if (db.prepare('SELECT 1 FROM tickets WHERE theater_id = ? AND user_id = ?').get(th.id, req.user.id)) return res.json({ ok: true, already: true });
+  } else if (HM.poolTicketFor(req.user.id)) {
+    return res.json({ ok: true, already: true, pool: true });
+  }
 
-  // ---- STUB CHECKOUT --------------------------------------------------
-  // A real integration would create a payment intent here and only issue the
-  // ticket on webhook confirmation. We accept any card-shaped input.
-  const card = String(req.body?.card || '').replace(/\s+/g, '');
-  if (card && card.length < 12) return bad(res, 402, 'That card was declined by our imaginary bank.');
-  // ---------------------------------------------------------------------
+  // Convenience for the single-seat path: pay for one credit and spend it at once.
+  if (req.body?.bundle || req.body?.card) {
+    try { PAY.cardCheckout(req.user.id, req.body.bundle || 'single', req.body.card); }
+    catch (e) { return bad(res, e.status || 400, e.message); }
+  }
+  if (!PAY.spendCredit(req.user.id)) {
+    return res.status(402).json({ error: 'No seats in your pocket.', needCredits: true, wallet: PAY.wallet(req.user.id) });
+  }
+  const ticket = seatSomeone(req.user.id, 'AUDIENCE', 'purchase', POLICY.tickets.audiencePriceCents);
+  if (!ticket) { db.prepare('UPDATE users SET credits = credits + 1 WHERE id = ?').run(req.user.id); return bad(res, 409, 'The doors just closed. Your credit is still in your pocket.'); }
+  res.json({ ok: true, ticket, pool: ticket.theater_id == null, credits: PAY.wallet(req.user.id).credits });
+});
 
-  const ticket = HM.grantTicket(th.id, req.user.id, 'AUDIENCE', 'purchase', POLICY.tickets.audiencePriceCents);
-  res.json({
-    ok: true, ticket,
-    receipt: { cents: POLICY.tickets.audiencePriceCents, stub: true, ref: id('rcpt') },
-  });
+/* ===========================================================================
+ * WALLET — seat credits, by card (stub) or over Lightning (stub / BTCPay)
+ * ========================================================================= */
+router.get('/api/wallet', (req, res) => res.json(PAY.wallet(req.user.id)));
+
+router.post('/api/wallet/checkout', (req, res) => {
+  try {
+    const p = PAY.cardCheckout(req.user.id, String(req.body?.bundle || 'single'), req.body?.card);
+    res.json({ ok: true, purchase: { id: p.id, credits: p.credits, cents: p.amount_cents, stub: true }, wallet: PAY.wallet(req.user.id) });
+  } catch (e) { bad(res, e.status || 400, e.message); }
+});
+
+router.post('/api/wallet/lightning', async (req, res) => {
+  try {
+    const inv = await PAY.createInvoice(req.user.id, String(req.body?.bundle || 'single'));
+    res.json({ ok: true, invoice: inv });
+  } catch (e) { bad(res, e.status || 400, e.message); }
+});
+
+router.get('/api/wallet/lightning/:id', (req, res) => {
+  const p = PAY.invoiceStatus(req.params.id, req.user.id);
+  if (!p) return bad(res, 404, 'No such invoice.');
+  res.json({ ok: true, status: p.status, credits: PAY.wallet(req.user.id).credits });
+});
+
+/* Stub settlement: stands in for the provider's webhook while nothing is wired. */
+router.post('/api/wallet/lightning/:id/simulate', (req, res) => {
+  if (PAY.PROVIDER !== 'stub') return bad(res, 404, 'Not a stub.');
+  const p = PAY.simulateSettle(req.params.id, req.user.id);
+  if (!p) return bad(res, 404, 'No such invoice.');
+  res.json({ ok: true, status: p.status, wallet: PAY.wallet(req.user.id) });
 });
 
 /* ===========================================================================
@@ -86,7 +135,7 @@ router.post('/api/films', (req, res) => {
   upload.single('video')(req, res, (err) => {
     if (err) return bad(res, 400, err.message);
     try {
-      const th = HM.ensureTheater();
+      const th = HM.mode() === 'nightly' ? HM.ensureTheater() : null;
       const file = req.file;
       if (!file) return bad(res, 400, 'No video attached.');
 
@@ -102,10 +151,11 @@ router.post('/api/films', (req, res) => {
       const title = String(req.body.title || '').trim().slice(0, 80);
       if (!title) { cleanup(); return bad(res, 400, 'Give it a title.'); }
 
-      const openSlot = HM.approvedFilms(th.id).length < JSON.parse(th.plan_json).filmSlots;
+      const nightly = HM.mode() === 'nightly' && th;
+      const openSlot = nightly && HM.approvedFilms(th.id).length < JSON.parse(th.plan_json).filmSlots;
       const film = {
         id: id('flm'),
-        theater_id: openSlot && ['FILLING', 'OPEN_CALL'].includes(th.state) ? th.id : null,
+        theater_id: openSlot && OPEN_STATES.includes(th.state) ? th.id : null,
         user_id: req.user.id,
         title,
         blurb: String(req.body.blurb || '').trim().slice(0, 200) || null,
@@ -128,10 +178,8 @@ router.post('/api/films', (req, res) => {
 
       HM.logEvent('submission', film.theater_id, req.user.id, { filmId: film.id });
       // A filmmaker holds a seat from the moment they submit.
-      if (['FILLING', 'OPEN_CALL'].includes(th.state)) {
-        HM.grantTicket(th.id, req.user.id, 'FILMMAKER', 'purchase', 0);
-      }
-      HM.hub.emit('theater:changed', th.id);
+      seatSomeone(req.user.id, 'FILMMAKER', 'purchase', 0);
+      HM.hub.emit('theater:changed', th ? th.id : null);
       res.json({ ok: true, film: { id: film.id, title: film.title, status: film.status } });
     } catch (e) {
       console.error(e);
@@ -283,7 +331,7 @@ function profileFor(userId) {
   const votes = db.prepare('SELECT COUNT(*) n FROM votes WHERE user_id = ?').get(userId).n;
   const roses = db.prepare("SELECT COUNT(*) n FROM reactions WHERE user_id = ? AND kind='rose'").get(userId).n;
   const tomatoes = db.prepare("SELECT COUNT(*) n FROM reactions WHERE user_id = ? AND kind='tomato'").get(userId).n;
-  return { user, stubs, films, wins, votesCast: votes, thrown: { roses, tomatoes } };
+  return { user, stubs, films, wins, votesCast: votes, thrown: { roses, tomatoes }, wallet: PAY.wallet(userId) };
 }
 
 router.get('/api/me', (req, res) => res.json(profileFor(req.user.id)));
@@ -335,17 +383,19 @@ router.get('/api/admin/queue', requireAdmin, (req, res) => {
 router.post('/api/admin/films/:id/approve', requireAdmin, (req, res) => {
   const film = db.prepare('SELECT * FROM films WHERE id = ?').get(req.params.id);
   if (!film) return bad(res, 404, 'No such film.');
-  const th = HM.ensureTheater();
-  const canJoin = ['FILLING', 'OPEN_CALL'].includes(th.state)
+  const th = HM.mode() === 'nightly' ? HM.ensureTheater() : null;
+  const canJoin = !!th && OPEN_STATES.includes(th.state)
     && HM.approvedFilms(th.id).length < JSON.parse(th.plan_json).filmSlots;
   db.prepare("UPDATE films SET status='approved', reviewed_at=?, theater_id=? WHERE id=?")
     .run(Date.now(), canJoin ? th.id : null, film.id);
   if (canJoin) {
     HM.grantTicket(th.id, film.user_id, 'FILMMAKER', 'purchase', 0);
     HM.markProgress(th.id);
+  } else if (HM.mode() === 'lobby') {
+    HM.grantPoolTicket(film.user_id, 'FILMMAKER', 'purchase', 0);   // into the pool with the film
   }
-  HM.hub.emit('theater:changed', th.id);
-  res.json({ ok: true, placed: canJoin ? th.id : null });
+  HM.hub.emit('theater:changed', th ? th.id : null);
+  res.json({ ok: true, placed: canJoin ? th.id : null, pooled: HM.mode() === 'lobby' });
 });
 
 router.post('/api/admin/films/:id/reject', requireAdmin, (req, res) => {
@@ -356,8 +406,8 @@ router.post('/api/admin/films/:id/reject', requireAdmin, (req, res) => {
     .run(reason, Date.now(), film.id);
   // The promise: a rejected filmmaker walks straight into the next house.
   if (POLICY.tickets.compRejectedFilmmakers) {
-    const th = HM.ensureTheater();
-    HM.grantTicket(th.id, film.user_id, 'AUDIENCE', 'comp_rejected', 0);
+    if (HM.mode() === 'lobby') HM.grantPoolTicket(film.user_id, 'AUDIENCE', 'comp_rejected', 0);
+    else HM.grantTicket(HM.ensureTheater().id, film.user_id, 'AUDIENCE', 'comp_rejected', 0);
   }
   HM.hub.emit('theater:changed', null);
   res.json({ ok: true, comped: POLICY.tickets.compRejectedFilmmakers });
@@ -372,14 +422,43 @@ function requireDev(req, res, next) {
   if (!DEV_ENABLED) return bad(res, 404, 'Dev tools are off.');
   next();
 }
+/* With several rooms running, the DEV panel drives the room YOU are in. */
+const myRoom = (req) => HM.roomFor(req.user.id) || HM.ensureTheater();
 
 router.get('/api/dev/status', requireDev, (req, res) => {
   res.json({ ...HM.status(), devEnabled: true, adminKey: ADMIN_KEY });
 });
 
+/** Force a House Manager mode (or 'auto' to hand it back to the policy). */
+router.post('/api/dev/mode', requireDev, (req, res) => {
+  const m = String(req.body?.mode || 'auto');
+  HM.setModeOverride(m === 'auto' ? null : m);
+  res.json({ ok: true, mode: HM.mode(), forced: m !== 'auto' });
+});
+
+/** Lobby mode: drop fake films and patrons into the pool so a room forms. */
+router.post('/api/dev/pool', requireDev, (req, res) => {
+  const films = Math.max(0, Math.min(12, Number(req.body?.films ?? 3)));
+  const patrons = Math.max(0, Math.min(60, Number(req.body?.patrons ?? 6)));
+  for (let i = 0; i < films; i++) {
+    const maker = makePatron();
+    makeFilm({ userId: maker.id, theaterId: null, status: 'approved', durationMs: 15000 + Math.round(Math.random() * 20000) });
+    HM.grantPoolTicket(maker.id, 'FILMMAKER', 'house', 0);
+  }
+  for (let i = 0; i < patrons; i++) HM.grantPoolTicket(makePatron().id, 'AUDIENCE', 'house', POLICY.tickets.audiencePriceCents);
+  res.json({ ok: true, films, patrons, note: HM.mode() === 'lobby' ? 'A room forms on the next tick if the pool can fill one.' : 'Nightly mode: the pool drains into the filling house.' });
+});
+
 /** Fill the current theater: enough fake films and fake patrons to trip the
  *  House Manager's own fill condition on the next tick. */
 router.post('/api/dev/fill', requireDev, (req, res) => {
+  if (HM.mode() === 'lobby') {
+    const K = HM.lobbyKnobs(HM.measureDemand());
+    const need = { films: Math.max(0, K.filmsToStart - HM.poolFilms().length), patrons: Math.max(0, K.audienceToStart - HM.poolTickets().filter((t) => t.kind === 'AUDIENCE').length) };
+    for (let i = 0; i < need.films; i++) { const m = makePatron(); makeFilm({ userId: m.id, theaterId: null, status: 'approved', durationMs: 15000 + Math.round(Math.random() * 20000) }); HM.grantPoolTicket(m.id, 'FILMMAKER', 'house', 0); }
+    for (let i = 0; i < need.patrons; i++) HM.grantPoolTicket(makePatron().id, 'AUDIENCE', 'house', POLICY.tickets.audiencePriceCents);
+    return res.json({ ok: true, addedFilms: need.films, addedSeats: need.patrons, note: 'Pool is ready; a room forms on the next tick.' });
+  }
   const th = HM.ensureTheater();
   if (!['FILLING', 'OPEN_CALL'].includes(th.state)) return bad(res, 409, `Theater is ${th.state}.`);
   const req_ = HM.requirements(th);
@@ -403,7 +482,8 @@ router.post('/api/dev/fill', requireDev, (req, res) => {
 
 /** Close the doors right now, with a countdown you choose. */
 router.post('/api/dev/close-doors', requireDev, (req, res) => {
-  const th = HM.ensureTheater();
+  const th = myRoom(req);
+  if (!th) return bad(res, 409, 'Lobby mode: no room yet — use "Fill theater" and a room will form.');
   if (!['FILLING', 'OPEN_CALL'].includes(th.state)) return bad(res, 409, `Theater is ${th.state}.`);
   if (HM.approvedFilms(th.id).length === 0) HM.drawFromReserve(th, { includeHouse: true });
   if (HM.approvedFilms(th.id).length === 0) return bad(res, 409, 'Nothing to screen — use "Fill theater" first.');
@@ -414,8 +494,14 @@ router.post('/api/dev/close-doors', requireDev, (req, res) => {
 
 /** Start the show immediately (or in N seconds) from any pre-show state. */
 router.post('/api/dev/start-show', requireDev, (req, res) => {
-  let th = HM.ensureTheater();
+  let th = myRoom(req);
   const seconds = Math.max(0, Number(req.body?.seconds ?? 0));
+  if (!th && HM.mode() === 'lobby') {
+    // Form a room out of whatever the pool has (padding it if it has nothing).
+    if (HM.poolFilms().length === 0) { const m = makePatron(); makeFilm({ userId: m.id, theaterId: null, status: 'approved', durationMs: 18000 }); HM.grantPoolTicket(m.id, 'FILMMAKER', 'house', 0); }
+    th = HM.formRoom(HM.poolFilms(), HM.poolTickets().filter((t) => t.kind === 'AUDIENCE'), { lobbyMs: seconds * 1000, reason: 'DEV' });
+  }
+  if (!th) return bad(res, 409, 'No room.');
   if (['FILLING', 'OPEN_CALL'].includes(th.state)) {
     if (HM.approvedFilms(th.id).length === 0) HM.drawFromReserve(th, { includeHouse: true });
     if (HM.approvedFilms(th.id).length === 0) return bad(res, 409, 'Nothing to screen — use "Fill theater" first.');
@@ -431,7 +517,8 @@ router.post('/api/dev/start-show', requireDev, (req, res) => {
 
 /** Skip to the last 8 seconds of the reel. */
 router.post('/api/dev/skip-to-end', requireDev, (req, res) => {
-  const th = HM.ensureTheater();
+  const th = myRoom(req);
+  if (!th) return bad(res, 409, 'No room right now.');
   if (th.state !== 'SHOWING') return bad(res, 409, `Theater is ${th.state}.`);
   const reel = HM.reelOf(th);
   db.prepare('UPDATE theaters SET started_at = ? WHERE id = ?')
@@ -442,7 +529,8 @@ router.post('/api/dev/skip-to-end', requireDev, (req, res) => {
 
 /** Jump straight to the ballot. */
 router.post('/api/dev/open-ballot', requireDev, (req, res) => {
-  const th = HM.ensureTheater();
+  const th = myRoom(req);
+  if (!th) return bad(res, 409, 'No room right now.');
   if (th.state !== 'SHOWING') return bad(res, 409, `Theater is ${th.state}.`);
   HM.openBallot(th);
   res.json({ ok: true });
@@ -450,16 +538,19 @@ router.post('/api/dev/open-ballot', requireDev, (req, res) => {
 
 /** End the ballot now and crown a winner. */
 router.post('/api/dev/close-ballot', requireDev, (req, res) => {
-  const th = HM.ensureTheater();
+  const th = myRoom(req);
+  if (!th) return bad(res, 409, 'No room right now.');
   if (th.state !== 'VOTING') return bad(res, 409, `Theater is ${th.state}.`);
   res.json({ ok: true, stats: HM.tally(th) });
 });
 
 /** Archive and open the next house. */
 router.post('/api/dev/next-theater', requireDev, (req, res) => {
-  const th = HM.ensureTheater();
+  const th = myRoom(req);
+  if (!th) return bad(res, 409, 'No room right now.');
   if (th.state === 'RESULTS') return res.json({ ok: true, next: HM.archive(th).id });
   db.prepare("UPDATE theaters SET state='ARCHIVED', archived_at=? WHERE id=?").run(Date.now(), th.id);
+  if (HM.mode() === 'lobby') return res.json({ ok: true, next: null, note: 'Lobby mode: the pool is the next house.' });
   const next = HM.openTheater();
   HM.drawFromReserve(next);
   res.json({ ok: true, next: next.id });
@@ -498,17 +589,20 @@ router.post('/api/dev/traffic', requireDev, (req, res) => {
 
 /** A few fake patrons wander in (moves the seat map, not the fill bar much). */
 router.post('/api/dev/crowd', requireDev, (req, res) => {
-  const th = HM.ensureTheater();
+  const th = myRoom(req);
+  if (!th) return bad(res, 409, 'No room right now.');
   const n = Math.max(1, Math.min(40, Number(req.body?.n ?? 5)));
   for (let i = 0; i < n; i++) {
-    HM.grantTicket(th.id, makePatron().id, 'AUDIENCE', 'house', POLICY.tickets.audiencePriceCents);
+    if (HM.mode() === 'lobby' && !['FILLING', 'OPEN_CALL'].includes(th.state)) HM.grantPoolTicket(makePatron().id, 'AUDIENCE', 'house', POLICY.tickets.audiencePriceCents);
+    else HM.grantTicket(th.id, makePatron().id, 'AUDIENCE', 'house', POLICY.tickets.audiencePriceCents);
   }
   res.json({ ok: true, added: n });
 });
 
 /** Ambient hype in the chat, so the room is never silent in a demo. */
 router.post('/api/dev/hype', requireDev, (req, res) => {
-  const th = HM.ensureTheater();
+  const th = myRoom(req);
+  if (!th) return bad(res, 409, 'No room right now.');
   const n = Math.max(1, Math.min(12, Number(req.body?.n ?? 4)));
   const patrons = db.prepare('SELECT u.id, u.handle FROM tickets t JOIN users u ON u.id = t.user_id WHERE t.theater_id = ? LIMIT 40').all(th.id);
   const out = [];
@@ -528,7 +622,8 @@ router.post('/api/dev/hype', requireDev, (req, res) => {
 
 /** Throw a handful of reactions from the crowd. */
 router.post('/api/dev/reactions', requireDev, (req, res) => {
-  const th = HM.ensureTheater();
+  const th = myRoom(req);
+  if (!th) return bad(res, 409, 'No room right now.');
   if (th.state !== 'SHOWING') return bad(res, 409, 'Nothing on screen.');
   const reel = HM.reelOf(th);
   const t = Date.now() - th.started_at;
@@ -548,7 +643,8 @@ router.post('/api/dev/reactions', requireDev, (req, res) => {
 
 /** Fake ballots from the seeded crowd, so results look like results. */
 router.post('/api/dev/votes', requireDev, (req, res) => {
-  const th = HM.ensureTheater();
+  const th = myRoom(req);
+  if (!th) return bad(res, 409, 'No room right now.');
   if (!['VOTING', 'SHOWING'].includes(th.state)) return bad(res, 409, `Theater is ${th.state}.`);
   const reel = HM.reelOf(th);
   if (!reel.entries.length) return bad(res, 409, 'No reel.');

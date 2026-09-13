@@ -252,12 +252,57 @@ module.exports = {
    * 9. TICKETS
    * ---------------------------------------------------------------------- */
   tickets: {
-    audiencePriceCents: 100,      // $1 — payments are stubbed, nothing is charged
+    audiencePriceCents: 100,      // $1 — the price on the sign; one seat = one credit
     encorePriceCents: 200,        // $2 — the encore button is a placeholder only
     // A rejected filmmaker is automatically comped into the next theater.
     compRejectedFilmmakers: true,
     // Filmmakers whose film did not make the reel roll over to the next one.
     carryOverUnscreenedFilms: true,
+
+    // Seats are sold as credits into a wallet. A single $1 seat stays on the
+    // menu (it is the honest price), but card fees on $1 are ~33%, so the
+    // bundles carry the emphasis: 5 for $5 (~9% fees), 12 for $10 (~6%).
+    bundles: [
+      { id: 'single', credits: 1,  cents: 100,  label: 'One seat' },
+      { id: 'five',   credits: 5,  cents: 500,  label: 'Five seats', featured: true },
+      { id: 'dozen',  credits: 12, cents: 1000, label: 'A dozen seats', note: 'two on the house' },
+    ],
+    // Bitcoin over Lightning. On-chain fees make a $1 ticket impossible;
+    // Lightning fees are a fraction of a cent, which makes it the cheapest rail
+    // for exactly this product. Provider is configured in payments.js.
+    lightning: { enabled: true, minCents: 100 },
+  },
+
+  /* -------------------------------------------------------------------------
+   * 11. MODES — one house, or a matchmaker
+   * 'nightly': ONE room at a time. It fills, or fires at the guaranteed
+   *            showtime, and screens whatever it has. Right for a thin pool.
+   * 'lobby':   A pool, not a room. Whenever enough approved films and waiting
+   *            audience exist, a room forms, counts down briefly and starts;
+   *            rooms overlap; who you land with is whoever was ready. Right
+   *            for a thick pool.
+   * 'auto':    nightly until demand crosses `lobbyAt`, lobby above it, with
+   *            hysteresis so it doesn't flap.
+   * Both are the same machine: nightly is lobby with one room and long waits.
+   * ---------------------------------------------------------------------- */
+  modes: {
+    select: 'auto',
+    lobbyAt: 30,                 // tickets/hour at which auto switches to lobby
+    nightlyAt: 12,               // ...and back to nightly (must be lower)
+
+    lobby: {
+      // A room forms when BOTH are met...
+      filmsToStart:    [{ at: 30, value: 3 }, { at: 120, value: 5 }],
+      audienceToStart: [{ at: 30, value: 4 }, { at: 120, value: 12 }],
+      // ...or when the oldest thing in the pool has waited this long and there
+      // is at least one film (the guaranteed showtime, per person).
+      maxWaitMinutes:  [{ at: 30, value: 12 }, { at: 120, value: 3 }],
+      // Room formed -> first frame. Not zero: everyone's video has to buffer
+      // so the first frame lands at the same second, and the hype needs a beat.
+      lobbySeconds:    [{ at: 30, value: 90 }, { at: 120, value: 60 }],
+      // How many rooms may be counting down or screening at once.
+      maxConcurrentRooms: [{ at: 30, value: 2 }, { at: 120, value: 12 }, { at: 400, value: 40 }],
+    },
   },
 
   /* -------------------------------------------------------------------------

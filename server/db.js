@@ -14,13 +14,44 @@ const db = new Database(path.join(DATA_DIR, 'theater.db'));
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
+/* The schema has a version. This is a prototype with disposable, reseedable
+ * data, so an older database is rebuilt from scratch rather than migrated. */
+const SCHEMA_VERSION = 2;
+if (db.pragma('user_version', { simple: true }) !== SCHEMA_VERSION) {
+  const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").all();
+  if (tables.length) {
+    console.warn(`[db] schema changed (v${SCHEMA_VERSION}) — rebuilding the demo database`);
+    db.pragma('foreign_keys = OFF');
+    for (const t of tables) db.exec(`DROP TABLE IF EXISTS "${t.name}"`);
+    db.pragma('foreign_keys = ON');
+  }
+  db.pragma(`user_version = ${SCHEMA_VERSION}`);
+}
+
 db.exec(`
 CREATE TABLE IF NOT EXISTS users (
   id          TEXT PRIMARY KEY,
   handle      TEXT NOT NULL,
   token       TEXT NOT NULL UNIQUE,
   is_house    INTEGER NOT NULL DEFAULT 0,
+  credits     INTEGER NOT NULL DEFAULT 0,     -- seats in your pocket (see payments.js)
   created_at  INTEGER NOT NULL
+);
+
+/* Seat credits bought with a card or over Lightning. */
+CREATE TABLE IF NOT EXISTS purchases (
+  id          TEXT PRIMARY KEY,
+  user_id     TEXT NOT NULL REFERENCES users(id),
+  rail        TEXT NOT NULL,               -- card|lightning|comp
+  bundle      TEXT,
+  credits     INTEGER NOT NULL,
+  amount_cents INTEGER NOT NULL,           -- fiat value at purchase
+  sats        INTEGER,                     -- for lightning
+  status      TEXT NOT NULL,               -- pending|paid|expired|failed
+  ref         TEXT,                        -- provider reference / invoice id
+  payment_request TEXT,                    -- bolt11, when lightning
+  created_at  INTEGER NOT NULL,
+  paid_at     INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS theaters (
@@ -37,6 +68,7 @@ CREATE TABLE IF NOT EXISTS theaters (
   results_end_at INTEGER,
   archived_at    INTEGER,
   guaranteed     INTEGER NOT NULL DEFAULT 0,   -- 1 = locked to a guaranteed showtime
+  mode           TEXT NOT NULL DEFAULT 'nightly', -- nightly|lobby: which House Manager mode formed it
   reel_json      TEXT,                          -- frozen running order, set at doors-close
   winner_film_id TEXT,
   last_progress_at INTEGER NOT NULL,            -- last ticket/film event; drives anti-stall
@@ -45,15 +77,33 @@ CREATE TABLE IF NOT EXISTS theaters (
 
 CREATE TABLE IF NOT EXISTS tickets (
   id          TEXT PRIMARY KEY,
-  theater_id  INTEGER NOT NULL REFERENCES theaters(id),
+  theater_id  INTEGER REFERENCES theaters(id),   -- NULL = waiting in the pool for a room
   user_id     TEXT NOT NULL REFERENCES users(id),
   kind        TEXT NOT NULL,               -- FILMMAKER|AUDIENCE
   source      TEXT NOT NULL DEFAULT 'purchase', -- purchase|comp_rejected|carryover|house
   seat_index  INTEGER,
   paid_cents  INTEGER NOT NULL DEFAULT 0,
   attended    INTEGER NOT NULL DEFAULT 0,
-  created_at  INTEGER NOT NULL,
-  UNIQUE(theater_id, user_id)
+  created_at  INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ticket_room_user ON tickets(theater_id, user_id) WHERE theater_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ticket_pool_user ON tickets(user_id) WHERE theater_id IS NULL;
+
+/* What actually happened in each room — the numbers the cadence is tuned on. */
+CREATE TABLE IF NOT EXISTS outcomes (
+  theater_id     INTEGER PRIMARY KEY REFERENCES theaters(id),
+  mode           TEXT NOT NULL,
+  tier           TEXT,
+  films          INTEGER NOT NULL,
+  tickets        INTEGER NOT NULL,
+  attended       INTEGER NOT NULL,
+  votes          INTEGER NOT NULL,
+  reactions      INTEGER NOT NULL,
+  wait_ms        INTEGER NOT NULL,     -- oldest ticket -> first frame
+  lobby_ms       INTEGER NOT NULL,     -- doors closed -> first frame
+  reel_ms        INTEGER NOT NULL,
+  started_at     INTEGER NOT NULL,
+  recorded_at    INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS films (

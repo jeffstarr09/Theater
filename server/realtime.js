@@ -35,7 +35,7 @@ function pushAll() {
 
 function markAttendance(c) {
   if (!c.user) return;
-  const th = HM.currentTheater();
+  const th = HM.roomFor(c.user.id);
   if (!th || !['DOORS_CLOSED', 'SHOWING', 'VOTING', 'RESULTS'].includes(th.state)) return;
   const tkt = db.prepare('SELECT * FROM tickets WHERE theater_id = ? AND user_id = ?').get(th.id, c.user.id);
   if (tkt && !tkt.attended) {
@@ -55,21 +55,12 @@ function currentFilmId(theater, now) {
 
 function handle(c, msg) {
   const now = Date.now();
-  const th = HM.currentTheater();
-  if (!th) return;
+  const th = HM.roomFor(c.user ? c.user.id : null);
+  if (msg.t === 'ping') return send(c.ws, { t: 'pong', c: msg.c, now: Date.now() });
+  if (msg.t === 'hello') { c.page = String(msg.page || '').slice(0, 24); markAttendance(c); return pushState(c, now); }
+  if (!th) return;                 // in the pool: nothing to chat into yet
 
   switch (msg.t) {
-    case 'ping':
-      /* Clock sync: the client measures round-trip and keeps an offset. */
-      send(c.ws, { t: 'pong', c: msg.c, now: Date.now() });
-      break;
-
-    case 'hello':
-      c.page = String(msg.page || '').slice(0, 24);
-      markAttendance(c);
-      pushState(c, now);
-      break;
-
     case 'chat': {
       if (!c.user) return;
       if (now - (c.last.chat || 0) < RATE.chat) return;

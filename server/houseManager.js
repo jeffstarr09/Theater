@@ -179,30 +179,204 @@ function nextGuaranteed(demand, now = Date.now()) {
 }
 
 /* ---------------------------------------------------------------------------
- * THEATER LIFECYCLE
+ * MODES — one house, or a matchmaker (see policy.modes)
+ * ------------------------------------------------------------------------ */
+let currentMode = null;      // 'nightly' | 'lobby'
+let modeOverride = null;     // DEV panel / admin: force a mode, or null for policy
+
+function resolveMode(demand) {
+  if (modeOverride) return modeOverride;
+  const M = POLICY.modes;
+  if (M.select !== 'auto') return M.select;
+  const tph = demand.ticketsPerHour;
+  // Hysteresis: climb into lobby at lobbyAt, fall back to nightly at nightlyAt.
+  if (currentMode === 'lobby') return tph < M.nightlyAt ? 'nightly' : 'lobby';
+  return tph >= M.lobbyAt ? 'lobby' : 'nightly';
+}
+function mode() { return currentMode || 'nightly'; }
+function setModeOverride(m, now = Date.now()) {
+  modeOverride = m === 'nightly' || m === 'lobby' ? m : null;
+  switchMode(resolveMode(measureDemand(now)), now);
+}
+
+/* Changing mode moves everyone, loses nobody. */
+function switchMode(next, now) {
+  if (next === currentMode) return;
+  const prev = currentMode;
+  currentMode = next;
+  if (next === 'lobby') dissolveFillingRooms(now);       // the filling house becomes the pool
+  else if (prev === 'lobby') adoptPool(now);             // the pool becomes a filling house
+  if (prev) logEvent('mode', null, null, { from: prev, to: next });
+  console.log(`[house manager] mode: ${next}${modeOverride ? ' (forced)' : ''}`);
+  hub.emit('theater:changed', null);
+}
+
+function dissolveFillingRooms(now) {
+  for (const th of rooms(['FILLING', 'OPEN_CALL'])) {
+    db.prepare("UPDATE films SET theater_id = NULL WHERE theater_id = ? AND status = 'approved'").run(th.id);
+    for (const t of db.prepare('SELECT id, user_id FROM tickets WHERE theater_id = ?').all(th.id)) {
+      const already = db.prepare('SELECT 1 FROM tickets WHERE user_id = ? AND theater_id IS NULL').get(t.user_id);
+      if (already) db.prepare('DELETE FROM tickets WHERE id = ?').run(t.id);
+      else db.prepare('UPDATE tickets SET theater_id = NULL, seat_index = NULL WHERE id = ?').run(t.id);
+    }
+    db.prepare("UPDATE theaters SET state='DISSOLVED', archived_at=? WHERE id=?").run(now, th.id);
+  }
+}
+function adoptPool(now) {
+  const th = latestRoom(['FILLING', 'OPEN_CALL']) || openTheater(now);
+  for (const t of poolTickets()) attachTicket(t, th);
+  drawFromReserve(th);
+}
+
+/* ---------------------------------------------------------------------------
+ * ROOMS
  * ------------------------------------------------------------------------ */
 const ACTIVE_STATES = ['FILLING', 'OPEN_CALL', 'DOORS_CLOSED', 'SHOWING', 'VOTING', 'RESULTS'];
+const marks = (a) => a.map(() => '?').join(',');
 
-function currentTheater() {
-  return db.prepare(
-    `SELECT * FROM theaters WHERE state IN (${ACTIVE_STATES.map(() => '?').join(',')}) ORDER BY id DESC LIMIT 1`
-  ).get(...ACTIVE_STATES);
+function rooms(states = ACTIVE_STATES) {
+  return db.prepare(`SELECT * FROM theaters WHERE state IN (${marks(states)}) ORDER BY id ASC`).all(...states);
 }
+function latestRoom(states = ACTIVE_STATES) {
+  return db.prepare(`SELECT * FROM theaters WHERE state IN (${marks(states)}) ORDER BY id DESC LIMIT 1`).get(...states) || null;
+}
+/* Nightly: the one house. Lobby: the newest room, for spectators. */
+function currentTheater() { return latestRoom(); }
 
 function openTheater(now = Date.now()) {
   const demand = measureDemand(now);
   const plan = planFor(demand, now);
   const info = db.prepare(`
-    INSERT INTO theaters (state, created_at, plan_json, tier, last_progress_at)
-    VALUES ('OPEN_CALL', ?, ?, ?, ?)`).run(now, JSON.stringify(plan), plan.tier, now);
+    INSERT INTO theaters (state, created_at, plan_json, tier, last_progress_at, mode)
+    VALUES ('OPEN_CALL', ?, ?, ?, ?, 'nightly')`).run(now, JSON.stringify(plan), plan.tier, now);
   const theater = db.prepare('SELECT * FROM theaters WHERE id = ?').get(info.lastInsertRowid);
   logEvent('theater_open', theater.id, null, { plan });
   hub.emit('theater:new', theater);
   return theater;
 }
 
+/** Nightly: the filling house if there is one, else the room mid-show, else a
+ *  new house. Lobby: the newest room, or null while the pool is all there is. */
 function ensureTheater(now = Date.now()) {
-  return currentTheater() || openTheater(now);
+  if (mode() === 'lobby') return latestRoom();
+  return latestRoom(['FILLING', 'OPEN_CALL']) || latestRoom() || openTheater(now);
+}
+
+/** The room a person should be looking at: theirs if they hold a seat in an
+ *  active one, otherwise the front of house (nightly) or the newest room (lobby). */
+function roomFor(userId, now = Date.now()) {
+  if (userId) {
+    const mine = db.prepare(`
+      SELECT th.* FROM tickets t JOIN theaters th ON th.id = t.theater_id
+      WHERE t.user_id = ? AND th.state IN (${marks(ACTIVE_STATES)})
+      ORDER BY th.id DESC LIMIT 1`).get(userId, ...ACTIVE_STATES);
+    if (mine) return mine;
+  }
+  return ensureTheater(now);
+}
+
+/* ---------------------------------------------------------------------------
+ * THE POOL — people and films waiting for a room (lobby mode)
+ * ------------------------------------------------------------------------ */
+function poolFilms() {
+  return db.prepare(`
+    SELECT f.*, u.handle FROM films f JOIN users u ON u.id = f.user_id
+    WHERE f.theater_id IS NULL AND f.status = 'approved' AND u.is_house = 0
+    ORDER BY f.created_at ASC`).all();
+}
+function poolTickets() {
+  return db.prepare(`
+    SELECT t.*, u.handle FROM tickets t JOIN users u ON u.id = t.user_id
+    WHERE t.theater_id IS NULL ORDER BY t.created_at ASC`).all();
+}
+function poolTicketFor(userId) {
+  return db.prepare('SELECT * FROM tickets WHERE user_id = ? AND theater_id IS NULL').get(userId) || null;
+}
+
+/** A seat with no room yet. Idempotent per user. */
+function grantPoolTicket(userId, kind, source = 'purchase', paidCents = 0) {
+  const existing = poolTicketFor(userId);
+  if (existing) {
+    if (kind === 'FILMMAKER' && existing.kind !== 'FILMMAKER') {
+      db.prepare("UPDATE tickets SET kind = 'FILMMAKER' WHERE id = ?").run(existing.id);
+    }
+    return existing;
+  }
+  const ticket = {
+    id: id('tkt'), theater_id: null, user_id: userId, kind, source,
+    seat_index: null, paid_cents: paidCents, created_at: Date.now(),
+  };
+  db.prepare(`INSERT INTO tickets (id, theater_id, user_id, kind, source, seat_index, paid_cents, attended, created_at)
+              VALUES (@id,@theater_id,@user_id,@kind,@source,@seat_index,@paid_cents,0,@created_at)`).run(ticket);
+  logEvent('ticket', null, userId, { kind, source, pool: true });
+  hub.emit('theater:changed', null);
+  return ticket;
+}
+
+/** Seat a pool ticket in a room. */
+function attachTicket(ticket, theater) {
+  const plan = JSON.parse(theater.plan_json);
+  const used = db.prepare('SELECT seat_index FROM tickets WHERE theater_id = ?').all(theater.id).map((r) => r.seat_index);
+  const seat = assignSeat(plan.seats, used);
+  db.prepare('UPDATE tickets SET theater_id = ?, seat_index = ? WHERE id = ?').run(theater.id, seat, ticket.id);
+}
+
+/** The lobby knobs at the current demand. */
+function lobbyKnobs(demand) {
+  const L = POLICY.modes.lobby, tph = demand.ticketsPerHour;
+  return {
+    filmsToStart: Math.max(1, Math.round(sample(L.filmsToStart, tph))),
+    audienceToStart: Math.max(0, Math.round(sample(L.audienceToStart, tph))),
+    maxWaitMs: sample(L.maxWaitMinutes, tph) * MIN,
+    lobbyMs: sample(L.lobbySeconds, tph) * 1000,
+    maxRooms: Math.max(1, Math.round(sample(L.maxConcurrentRooms, tph))),
+  };
+}
+
+/** Lobby mode's heartbeat: form a room whenever the pool can fill one. */
+function assemble(now, demand) {
+  const K = lobbyKnobs(demand);
+  if (rooms(['DOORS_CLOSED', 'SHOWING']).length >= K.maxRooms) return null;
+  const films = poolFilms();
+  const waiting = poolTickets();
+  const audience = waiting.filter((t) => t.kind === 'AUDIENCE');
+  const oldest = Math.min(...films.map((f) => f.created_at), ...waiting.map((t) => t.created_at));
+  const ready = films.length >= K.filmsToStart && audience.length >= K.audienceToStart;
+  const overdue = Number.isFinite(oldest) && now - oldest >= K.maxWaitMs && films.length >= POLICY.antiStall.minFilmsFloor;
+  if (!ready && !overdue) return null;
+
+  const plan = planFor(demand, now);
+  const takeFilms = films.slice(0, Math.max(1, plan.filmSlots));
+  const seats = Math.max(plan.seats, POLICY.shape.minSeatsEver);
+  const takeAudience = audience.slice(0, Math.max(0, seats - takeFilms.length));
+  return formRoom(takeFilms, takeAudience, { lobbyMs: K.lobbyMs, reason: ready ? 'ready' : 'max wait' }, now);
+}
+
+/** Build a room out of pool films and pool tickets, and start its lobby clock. */
+function formRoom(films, audienceTickets, { lobbyMs, reason }, now = Date.now()) {
+  const demand = measureDemand(now);
+  const plan = planFor(demand, now);
+  plan.filmSlots = films.length;
+  plan.seats = Math.max(plan.seats, films.length + audienceTickets.length, POLICY.shape.minSeatsEver);
+  plan.countdownMinutes = lobbyMs / MIN;
+  plan.lobbyMs = lobbyMs;
+  const info = db.prepare(`
+    INSERT INTO theaters (state, created_at, plan_json, tier, last_progress_at, mode)
+    VALUES ('FILLING', ?, ?, ?, ?, 'lobby')`).run(now, JSON.stringify(plan), plan.tier, now);
+  const theater = db.prepare('SELECT * FROM theaters WHERE id = ?').get(info.lastInsertRowid);
+
+  for (const f of films) {
+    db.prepare('UPDATE films SET theater_id = ? WHERE id = ?').run(theater.id, f.id);
+    const pool = poolTicketFor(f.user_id);
+    if (pool) { db.prepare("UPDATE tickets SET kind='FILMMAKER' WHERE id = ?").run(pool.id); attachTicket(pool, theater); }
+    else grantTicket(theater.id, f.user_id, 'FILMMAKER', 'purchase', 0);
+  }
+  for (const t of audienceTickets) attachTicket(t, theater);
+
+  logEvent('room_formed', theater.id, null, { reason, films: films.length, audience: audienceTickets.length, lobbyMs });
+  closeDoors(theater, { showtimeAt: now + lobbyMs, reason: `lobby · ${reason}` }, now);
+  hub.emit('theater:new', theater);
+  return theater;
 }
 
 function logEvent(type, theaterId, userId, meta) {
@@ -355,10 +529,30 @@ function tally(theater, now = Date.now()) {
   return stats;
 }
 
+/* What happened in this room, in the numbers the cadence is tuned on. */
+function recordOutcome(theater, now = Date.now()) {
+  const tickets = ticketRows(theater.id);
+  const reel = reelOf(theater);
+  const votes = db.prepare('SELECT COUNT(*) n FROM votes WHERE theater_id = ?').get(theater.id).n;
+  const reactions = db.prepare('SELECT COUNT(*) n FROM reactions WHERE theater_id = ?').get(theater.id).n;
+  const firstIn = tickets.length ? Math.min(...tickets.map((t) => t.created_at)) : theater.created_at;
+  const started = theater.started_at || now;
+  db.prepare(`INSERT OR REPLACE INTO outcomes
+      (theater_id, mode, tier, films, tickets, attended, votes, reactions, wait_ms, lobby_ms, reel_ms, started_at, recorded_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+    .run(theater.id, theater.mode || 'nightly', theater.tier, reel.entries.length, tickets.length,
+      tickets.filter((t) => t.attended).length, votes, reactions,
+      Math.max(0, started - firstIn), Math.max(0, started - (theater.doors_closed_at || started)),
+      reel.totalMs, started, now);
+}
+
 function archive(theater, now = Date.now()) {
+  recordOutcome(theater, now);
   db.prepare("UPDATE theaters SET state='ARCHIVED', archived_at=? WHERE id = ?").run(now, theater.id);
   hub.emit('theater:transition', { theaterId: theater.id, state: 'ARCHIVED' });
-  const next = openTheater(now);
+  if (mode() === 'lobby') return null;          // the pool is the next house
+
+  const next = latestRoom(['FILLING', 'OPEN_CALL']) || openTheater(now);
   // Rejected filmmakers get comped into the next house, as promised.
   if (POLICY.tickets.compRejectedFilmmakers) {
     const rejected = db.prepare(`
@@ -376,12 +570,22 @@ function archive(theater, now = Date.now()) {
 let lastReplan = 0;
 
 function tick(now = Date.now()) {
-  let theater = ensureTheater(now);
   const demand = measureDemand(now);
+  switchMode(resolveMode(demand), now);
+  if (mode() === 'lobby') {
+    for (const room of rooms(['DOORS_CLOSED', 'SHOWING', 'VOTING', 'RESULTS'])) advanceRoom(room, now);
+    assemble(now, demand);
+    return;
+  }
+  // Rooms left over from lobby mode finish on their own; the one house fills.
+  for (const room of rooms(['DOORS_CLOSED', 'SHOWING', 'VOTING', 'RESULTS'])) advanceRoom(room, now);
+  const theater = ensureTheater(now);
+  if (['FILLING', 'OPEN_CALL'].includes(theater.state)) fillNightly(theater, demand, now);
+}
 
-  switch (theater.state) {
-    case 'OPEN_CALL':
-    case 'FILLING': {
+/* Nightly mode: one house that fills, decays, converts, or fires on the clock. */
+function fillNightly(theater, demand, now) {
+  {
       // Keep the room the right size for the crowd outside it.
       if (now - lastReplan >= POLICY.clock.replanEveryMs) {
         lastReplan = now;
@@ -411,7 +615,7 @@ function tick(now = Date.now()) {
         if (approvedFilms(theater.id).length >= POLICY.antiStall.minFilmsFloor) {
           if (closeDoors(theater, { showtimeAt: g.at, guaranteed: true, reason: `guaranteed ${g.label}` }, now)) {
             if (g.label === 'DEV') devGuaranteedAt = null;
-            break;
+            return;
           }
         }
       }
@@ -422,7 +626,7 @@ function tick(now = Date.now()) {
       const seatsOk = tickets >= req.seatsNeeded;
       if ((filmsOk && seatsOk) || (programmeFull && tickets >= Math.ceil(req.seatsNeeded * 0.5))) {
         const showtimeAt = now + req.plan.countdownMinutes * MIN;
-        if (closeDoors(theater, { showtimeAt, reason: programmeFull ? 'programme full' : 'filled' }, now)) break;
+        if (closeDoors(theater, { showtimeAt, reason: programmeFull ? 'programme full' : 'filled' }, now)) return;
       }
 
       // (3) ANTI-STALL DECAY — quiet rooms get easier to fill, on a timer.
@@ -441,9 +645,12 @@ function tick(now = Date.now()) {
         const showtimeAt = now + Math.max(2, req.plan.countdownMinutes * 0.5) * MIN;
         closeDoors(theater, { showtimeAt, reason: 'converted to scheduled showtime' }, now);
       }
-      break;
-    }
+  }
+}
 
+/* Doors closed -> showing -> ballot -> verdict -> archived. Same in both modes. */
+function advanceRoom(theater, now) {
+  switch (theater.state) {
     case 'DOORS_CLOSED':
       if (now >= theater.showtime_at) {
         if (!startShow(theater, now)) {
@@ -502,6 +709,7 @@ function replan(theater, demand, now) {
 let timer = null;
 function start() {
   if (timer) return;
+  switchMode(resolveMode(measureDemand()), Date.now());
   ensureTheater();
   timer = setInterval(() => {
     try { tick(); } catch (err) { console.error('[house manager] tick failed:', err); }
@@ -515,23 +723,65 @@ function stop() { if (timer) clearInterval(timer); timer = null; }
 function status(now = Date.now()) {
   const demand = measureDemand(now);
   const theater = ensureTheater(now);
-  const req = requirements(theater);
-  const films = approvedFilms(theater.id);
-  const tickets = db.prepare('SELECT COUNT(*) n FROM tickets WHERE theater_id = ?').get(theater.id).n;
   const g = nextGuaranteed(demand, now);
-  return {
-    now, demand, theaterId: theater.id, state: theater.state,
-    plan: req.plan, decaySteps: req.steps,
-    effective: { minFilms: req.minFilms, seatQuorum: Math.round(req.seatQuorum * 100) / 100, seatsNeeded: req.seatsNeeded },
-    have: { films: films.length, tickets },
-    quietForMs: now - theater.last_progress_at,
+  const out = {
+    now, demand, mode: mode(), modeOverride, modeSelect: POLICY.modes.select,
+    theaterId: theater ? theater.id : null, state: theater ? theater.state : 'MATCHING',
     nextGuaranteed: g,
+    rooms: rooms().map((r) => ({
+      id: r.id, state: r.state, mode: r.mode,
+      films: approvedFilms(r.id).length,
+      tickets: db.prepare('SELECT COUNT(*) n FROM tickets WHERE theater_id = ?').get(r.id).n,
+      showtimeAt: r.showtime_at,
+    })),
+    outcomes: outcomeSummary(),
+  };
+  if (theater && ['FILLING', 'OPEN_CALL'].includes(theater.state)) {
+    const req = requirements(theater);
+    out.plan = req.plan; out.decaySteps = req.steps;
+    out.effective = { minFilms: req.minFilms, seatQuorum: Math.round(req.seatQuorum * 100) / 100, seatsNeeded: req.seatsNeeded };
+    out.have = { films: approvedFilms(theater.id).length, tickets: db.prepare('SELECT COUNT(*) n FROM tickets WHERE theater_id = ?').get(theater.id).n };
+    out.quietForMs = now - theater.last_progress_at;
+  } else {
+    out.plan = planFor(demand, now);
+  }
+  const K = lobbyKnobs(demand);
+  const films = poolFilms(), waiting = poolTickets();
+  const oldest = Math.min(...films.map((f) => f.created_at), ...waiting.map((t) => t.created_at));
+  out.pool = {
+    films: films.length,
+    audience: waiting.filter((t) => t.kind === 'AUDIENCE').length,
+    filmmakers: waiting.filter((t) => t.kind === 'FILMMAKER').length,
+    oldestWaitMs: Number.isFinite(oldest) ? now - oldest : 0,
+    knobs: { filmsToStart: K.filmsToStart, audienceToStart: K.audienceToStart,
+      maxWaitMinutes: Math.round(K.maxWaitMs / MIN), lobbySeconds: Math.round(K.lobbyMs / 1000), maxRooms: K.maxRooms },
+  };
+  return out;
+}
+
+/** The last rooms, and the averages the cadence should be judged on. */
+function outcomeSummary(limit = 12) {
+  const recent = db.prepare('SELECT * FROM outcomes ORDER BY recorded_at DESC LIMIT ?').all(limit);
+  const n = recent.length;
+  const avg = (f) => (n ? recent.reduce((a, r) => a + f(r), 0) / n : 0);
+  return {
+    recent: recent.map((r) => ({
+      theaterId: r.theater_id, mode: r.mode, films: r.films, tickets: r.tickets, attended: r.attended,
+      votes: r.votes, reactions: r.reactions, waitMin: Math.round(r.wait_ms / 6000) / 10, lobbySec: Math.round(r.lobby_ms / 1000),
+    })),
+    rooms: n,
+    attendanceRate: n ? Math.round(avg((r) => (r.tickets ? r.attended / r.tickets : 0)) * 100) / 100 : null,
+    avgWaitMin: n ? Math.round(avg((r) => r.wait_ms / MIN) * 10) / 10 : null,
+    ballotsPerAttendee: n ? Math.round(avg((r) => (r.attended ? r.votes / r.attended : 0)) * 100) / 100 : null,
+    avgRoom: n ? Math.round(avg((r) => r.tickets)) : null,
   };
 }
 
 module.exports = {
   hub, tick, start, stop, status, measureDemand, planFor, requirements, sample,
-  currentTheater, ensureTheater, openTheater, grantTicket, approvedFilms, ticketRows,
-  buildReel, reelOf, closeDoors, startShow, openBallot, tally, archive, logEvent,
-  markProgress, drawFromReserve, nextGuaranteed, setDevGuaranteed, ACTIVE_STATES,
+  currentTheater, ensureTheater, openTheater, roomFor, rooms, latestRoom,
+  grantTicket, grantPoolTicket, poolTicketFor, poolFilms, poolTickets, attachTicket,
+  approvedFilms, ticketRows, buildReel, reelOf, closeDoors, startShow, openBallot, tally, archive,
+  recordOutcome, outcomeSummary, logEvent, markProgress, drawFromReserve, nextGuaranteed, setDevGuaranteed,
+  mode, setModeOverride, lobbyKnobs, assemble, formRoom, ACTIVE_STATES,
 };

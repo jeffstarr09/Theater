@@ -24,6 +24,7 @@ hall.on('state', (s) => { S = s; render(s); });
 hall.on('chat', (m) => appendChat(m.msg));
 hall.on('react', (r) => { throwThing(r); bump(r.filmId, r.kind); });
 hall.on('transition', (t) => {
+  if (t.state === 'DOORS_CLOSED' && S && S.theater.state === 'MATCHING') toast('A house formed around you.');
   if (t.state === 'SHOWING') toast('House lights down.');
   if (t.state === 'VOTING') toast('Ballot is open — 60 seconds.');
   if (t.state === 'RESULTS') toast('The verdict is in.');
@@ -38,7 +39,7 @@ function render(s) {
   $('#marquee').innerHTML = marqueeText(s);
 
   const showing = st === 'SHOWING';
-  const pre = ['FILLING', 'OPEN_CALL', 'DOORS_CLOSED'].includes(st);
+  const pre = ['MATCHING', 'FILLING', 'OPEN_CALL', 'DOORS_CLOSED'].includes(st);
   $('#pre').style.display = pre ? '' : 'none';
   $('#showing').style.display = showing ? '' : 'none';
   $('#voting').style.display = st === 'VOTING' ? '' : 'none';
@@ -70,8 +71,15 @@ function renderPre(s) {
 
   const actions = $('#pre-actions');
   actions.innerHTML = '';
-  $('#pre-label').textContent = `Theater #${s.theater.number} · ${(STATE_COPY[st] || STATE_COPY.FILLING).label}`;
-  if (st === 'DOORS_CLOSED') {
+  $('#pre-label').textContent = `${s.theater.number ? `Theater #${s.theater.number} · ` : ''}${(STATE_COPY[st] || STATE_COPY.FILLING).label}`;
+  if (st === 'MATCHING') {
+    $('#pre-note').textContent = s.you.ticket
+      ? 'You are in the pool. When a room forms around you, this screen becomes its countdown.'
+      : 'Nobody has a room yet. Buy a seat or hang a poster out front and one forms around you.';
+    const a = el('a', 'btn small', 'Back outside');
+    a.href = '/';
+    actions.appendChild(a);
+  } else if (st === 'DOORS_CLOSED') {
     $('#pre-note').textContent = s.you.ticket
       ? 'You are in your seat. The reel starts on its own.'
       : 'Standing room at the back. The doors are closed for this one.';
@@ -102,13 +110,22 @@ function drawPreScreen(s) {
     ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
     ctx.textAlign = 'center';
     ctx.fillStyle = '#b08c62'; ctx.font = `${Math.round(h * 0.05)}px ui-monospace, monospace`;
-    ctx.fillText(`THEATER #${s.theater.number}`, w / 2, h * 0.22);
+    ctx.fillText(s.theater.number ? `THEATER #${s.theater.number}` : 'THE POOL', w / 2, h * 0.22);
     if (s.theater.state === 'DOORS_CLOSED') {
       const left = Math.max(0, s.theater.showtimeAt - t);
       ctx.fillStyle = '#ffe9c0'; ctx.font = `${Math.round(h * 0.22)}px ui-monospace, monospace`;
       ctx.fillText(clockString(left), w / 2, h * 0.56);
       ctx.fillStyle = '#ff6fb7'; ctx.font = `${Math.round(h * 0.05)}px ui-monospace, monospace`;
       ctx.fillText(left > 0 ? 'UNTIL CURTAIN' : 'ROLLING', w / 2, h * 0.7);
+    } else if (s.theater.state === 'MATCHING') {
+      const m = s.matching;
+      ctx.fillStyle = '#ffe9c0'; ctx.font = `${Math.round(h * 0.11)}px Georgia, serif`;
+      ctx.fillText('Finding you a house', w / 2, h * 0.5);
+      ctx.fillStyle = '#ff6fb7'; ctx.font = `${Math.round(h * 0.05)}px ui-monospace, monospace`;
+      ctx.fillText(`${m.filmsReady} / ${m.filmsToStart} FILMS READY${m.audienceReady ? ' · AUDIENCE READY' : ''}`, w / 2, h * 0.66);
+      ctx.fillStyle = '#b08c62';
+      const left = Math.max(0, m.startsBy - t);
+      ctx.fillText(s.you.ticket ? `STARTS WITHIN ${clockString(left)}` : `ROOMS FORM WITHIN ${m.maxWaitMinutes} MIN`, w / 2, h * 0.8);
     } else {
       ctx.fillStyle = '#ffe9c0'; ctx.font = `${Math.round(h * 0.11)}px Georgia, serif`;
       ctx.fillText(s.theater.state === 'OPEN_CALL' ? 'Open call' : 'Now filling', w / 2, h * 0.5);

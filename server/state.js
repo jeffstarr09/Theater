@@ -29,8 +29,51 @@ function voteCounts(theaterId) {
   return out;
 }
 
+/* Lobby mode, before a room has formed around you: what the pool looks like. */
+function matchingState(viewerId, now) {
+  const demand = HM.measureDemand(now);
+  const st = HM.status(now);
+  const poolTicket = viewerId ? HM.poolTicketFor(viewerId) : null;
+  const mySubmission = viewerId ? db.prepare(
+    `SELECT id, title, status, reject_reason, theater_id FROM films
+     WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`).get(viewerId) : null;
+  const wallet = viewerId ? db.prepare('SELECT credits FROM users WHERE id = ?').get(viewerId) : null;
+  return {
+    serverNow: now,
+    mode: 'lobby',
+    theater: {
+      id: 0, number: null, state: 'MATCHING', tier: demand.tier, guaranteed: false,
+      createdAt: now, doorsClosedAt: null, showtimeAt: null, startedAt: null,
+      votingEndsAt: null, resultsEndAt: null, winnerFilmId: null,
+      capacity: st.plan.seats, filmSlots: st.plan.filmSlots, countdownMinutes: 0,
+    },
+    matching: {
+      filmsReady: st.pool.films, filmsToStart: st.pool.knobs.filmsToStart,
+      // No headcount leaves the server: only whether the audience side is ready.
+      audienceReady: st.pool.audience >= st.pool.knobs.audienceToStart,
+      maxWaitMinutes: st.pool.knobs.maxWaitMinutes, lobbySeconds: st.pool.knobs.lobbySeconds,
+      startsBy: (poolTicket ? poolTicket.created_at : now) + st.pool.knobs.maxWaitMinutes * 60000,
+      roomsRunning: st.rooms.filter((r) => ['DOORS_CLOSED', 'SHOWING'].includes(r.state)).length,
+    },
+    marquee: HM.nextGuaranteed(demand, now),
+    seatMap: null,
+    programme: HM.poolFilms().slice(0, st.plan.filmSlots).map((f, i) => ({ id: f.id, title: f.title, by: f.handle, order: i + 1, blurb: f.blurb })),
+    slots: { filled: Math.min(st.pool.films, st.pool.knobs.filmsToStart), total: st.pool.knobs.filmsToStart },
+    you: {
+      id: viewerId || null,
+      ticket: poolTicket ? { kind: poolTicket.kind, source: poolTicket.source, seatIndex: null, pool: true } : null,
+      submission: mySubmission || null,
+      votedFilmId: null,
+      credits: wallet ? wallet.credits : 0,
+    },
+    prices: { audienceCents: POLICY.tickets.audiencePriceCents, encoreCents: POLICY.tickets.encorePriceCents, bundles: POLICY.tickets.bundles, lightning: POLICY.tickets.lightning.enabled },
+    limits: { minDurationSec: POLICY.submissions.minDurationSec, maxDurationSec: POLICY.submissions.maxDurationSec, maxBytes: POLICY.submissions.maxBytes },
+  };
+}
+
 function publicState(viewerId, now = Date.now()) {
-  const theater = HM.ensureTheater(now);
+  const theater = HM.roomFor(viewerId, now);
+  if (!theater) return matchingState(viewerId, now);
   const plan = JSON.parse(theater.plan_json);
   const tickets = HM.ticketRows(theater.id);
   const films = HM.approvedFilms(theater.id);
@@ -38,18 +81,20 @@ function publicState(viewerId, now = Date.now()) {
   const guaranteed = HM.nextGuaranteed(demand, now);
   const seatMap = buildSeatMap(theater, tickets, viewerId, now);
 
-  const myTicket = viewerId ? tickets.find((t) => t.user_id === viewerId) : null;
+  const myTicket = viewerId ? (tickets.find((t) => t.user_id === viewerId) || HM.poolTicketFor(viewerId)) : null;
   const mySubmission = viewerId ? db.prepare(
     `SELECT id, title, status, reject_reason, theater_id FROM films
      WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`).get(viewerId) : null;
   const myVote = viewerId ? db.prepare('SELECT film_id FROM votes WHERE theater_id = ? AND user_id = ?')
     .get(theater.id, viewerId) : null;
+  const wallet = viewerId ? db.prepare('SELECT credits FROM users WHERE id = ?').get(viewerId) : null;
 
   const showing = ['SHOWING', 'VOTING', 'RESULTS'].includes(theater.state);
   const reel = theater.reel_json ? JSON.parse(theater.reel_json) : null;
 
   const state = {
     serverNow: now,
+    mode: HM.mode(),
     theater: {
       id: theater.id,
       number: theater.id,
@@ -77,13 +122,16 @@ function publicState(viewerId, now = Date.now()) {
     slots: { filled: films.length, total: plan.filmSlots },
     you: {
       id: viewerId || null,
-      ticket: myTicket ? { kind: myTicket.kind, source: myTicket.source, seatIndex: myTicket.seat_index } : null,
+      ticket: myTicket ? { kind: myTicket.kind, source: myTicket.source, seatIndex: myTicket.seat_index, pool: myTicket.theater_id == null } : null,
       submission: mySubmission || null,
       votedFilmId: myVote ? myVote.film_id : null,
+      credits: wallet ? wallet.credits : 0,
     },
     prices: {
       audienceCents: POLICY.tickets.audiencePriceCents,
       encoreCents: POLICY.tickets.encorePriceCents,
+      bundles: POLICY.tickets.bundles,
+      lightning: POLICY.tickets.lightning.enabled,
     },
     limits: {
       minDurationSec: POLICY.submissions.minDurationSec,
