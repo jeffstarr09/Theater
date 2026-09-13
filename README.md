@@ -77,7 +77,7 @@ setting is remembered per browser.
 
 ## The art
 
-The scene plates and the walking figure are licensed Adobe Stock vector illustrations (free
+The scene plates are licensed Adobe Stock vector illustrations (free
 collection, standard license), pulled through the Adobe connector, rasterised with Ghostscript
 and reworked in Pillow/NumPy — nothing was hand-drawn and no generative model was used:
 
@@ -85,7 +85,6 @@ and reworked in Pillow/NumPy — nothing was hand-drawn and no generative model 
 |---|---|---|
 | `public/art/facade.jpg` | Adobe Stock #426627839, *Cinema building vector illustration on background of city at night* | rendered from the .ai, right half mirrored from the left to remove the parked cars, cropped to the theater block, night-graded (windows kept lit) |
 | `public/art/auditorium.jpg` | Adobe Stock #304236895, *Audience sitting in a vintage cinema theatre* | rendered from the .ai, blue room re-hued to the house purple |
-| `public/art/walk_sheet.png` | Adobe Stock #1323562015, *walking step cycle sequence* | seven frames cut out and recoloured into a sprite sheet (from the earlier third-person version; kept for the seating-chart palette, not shown on screen) |
 
 The interactive hotspots (`public/css/street.css`) are percentages measured off the plate, so the
 clickable doors, windows and board stay glued to the painting at any width. A Canva-generated
@@ -179,7 +178,7 @@ public/
   house.html       ← the auditorium: countdown, screening, ballot, verdict
   js/avatar.js     ← seated-crowd figures for the seating chart
   js/slate.js      ← procedural films, title cards and poster art
-  art/             ← the licensed scene plates and sprite sheet
+  art/             ← the licensed scene plates
   …                ← submit, hall of fame, profile, moderation desk
 assets/demo/       ← three short clips used to seed real video
 ```
