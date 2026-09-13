@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Theater — Auditorium</title>
+<link rel="stylesheet" href="/static/css/theater.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🎬</text></svg>">
+</head>
+<body>
+<div class="marquee" id="marquee">—</div>
+
+<div class="wrap">
+  <div class="grid">
+    <div>
+      <!-- PRE-SHOW -->
+      <section class="panel" id="pre">
+        <div class="state-line">
+          <h2 style="margin:0">The house</h2>
+          <span class="pill" id="state-pill">—</span>
+        </div>
+        <p class="theater-no" id="theater-no">Theater #—</p>
+        <div class="countdown" id="countdown">--:--</div>
+        <div class="countdown-sub" id="countdown-sub">until showtime</div>
+        <div class="screen-arc">screen</div>
+        <div class="seatmap" id="seatmap"></div>
+        <div class="mood" id="mood"></div>
+        <p class="lede center" id="pre-note"></p>
+        <div class="btn-row" id="pre-actions" style="justify-content:center"></div>
+      </section>
+
+      <!-- SCREENING -->
+      <section class="panel auditorium" id="showing" style="display:none">
+        <div class="screen" id="screen">
+          <video id="video" playsinline muted preload="auto" style="display:none"></video>
+          <canvas id="canvas"></canvas>
+          <div class="overlay" id="overlay"></div>
+          <div class="no-controls">no pause · no scrub · no replay</div>
+          <div class="now-showing"><small id="ns-label">Now showing</small><span id="ns-title"></span></div>
+          <div class="reel-progress"><i id="reel-bar" style="width:0%"></i></div>
+        </div>
+        <div class="throw-row">
+          <button class="throw" id="throw-rose" title="Throw a rose">🌹</button>
+          <button class="btn ghost small" id="sound">🔇 Sound off</button>
+          <button class="throw" id="throw-tomato" title="Throw a tomato">🍅</button>
+        </div>
+        <div class="tally" id="tally"></div>
+      </section>
+
+      <!-- BALLOT -->
+      <section class="panel" id="voting" style="display:none">
+        <h2>Best Picture</h2>
+        <div class="countdown" id="vote-clock">--</div>
+        <div class="countdown-sub">seconds left on the ballot</div>
+        <div class="ballot" id="ballot" style="margin-top:18px"></div>
+      </section>
+
+      <!-- RESULTS -->
+      <section class="panel" id="results" style="display:none">
+        <h2>The verdict</h2>
+        <div id="winner-box"></div>
+        <div id="results-list"></div>
+        <div class="btn-row"><a class="btn" href="/hall">Hall of Fame</a><a class="btn ghost" href="/">Back to the lobby</a></div>
+      </section>
+    </div>
+
+    <div>
+      <section class="panel">
+        <h2 id="chat-title">Hype</h2>
+        <div class="chat">
+          <div class="chat-log" id="chat-log"></div>
+          <form class="chat-form" id="chat-form">
+            <input type="text" id="chat-input" maxlength="240" placeholder="Say something to the room" autocomplete="off">
+            <button class="btn small" type="submit">Send</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="panel" id="house-panel" style="display:none">
+        <h2>In the house tonight</h2>
+        <div class="house-list" id="house-list"></div>
+        <p class="lede tiny">Everyone here is a stranger with a good name.</p>
+      </section>
+
+      <section class="panel">
+        <h2>Running order</h2>
+        <ul class="film-list" id="programme"></ul>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/common.js"></script>
+<script src="/static/js/slate.js"></script>
+<script src="/static/js/house.js"></script>
+<script src="/static/js/dev.js"></script>
+</body>
+</html>

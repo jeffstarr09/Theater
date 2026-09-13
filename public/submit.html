@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Theater — Submit a film</title>
+<link rel="stylesheet" href="/static/css/theater.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🎞️</text></svg>">
+</head>
+<body>
+<div class="marquee" id="marquee">—</div>
+<div class="wrap">
+  <div class="grid">
+    <div>
+      <section class="panel">
+        <h2>Filmmaker ticket</h2>
+        <p class="lede">A filmmaker's seat is free — the price is a film. Fifteen to sixty seconds,
+          mp4 or webm, under 50MB. It goes to the moderation desk, and if it is approved it takes a
+          slot in the next programme.</p>
+        <p class="lede tiny">If we turn it down you get a comped audience ticket to the next theater,
+          automatically. If it is approved but the reel is already full, it rolls to the house after.</p>
+
+        <form id="form">
+          <label for="title">Title</label>
+          <input type="text" id="title" maxlength="80" placeholder="Notes on a Laundromat" required>
+
+          <label for="blurb">One line about it (optional)</label>
+          <input type="text" id="blurb" maxlength="200" placeholder="Shot in one take at 4am.">
+
+          <label for="file">The film · mp4 or webm · 15–60s · ≤50MB</label>
+          <input type="file" id="file" accept="video/mp4,video/webm" required>
+
+          <div id="probe" class="lede tiny"></div>
+          <div class="meter" id="bar-wrap" style="margin-top:14px;display:none"><i id="bar" style="width:0%"></i></div>
+
+          <div class="btn-row">
+            <button class="btn primary" type="submit" id="go" disabled>Submit to the desk</button>
+            <a class="btn ghost" href="/">Back to the lobby</a>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2>Preview</h2>
+        <div class="screen" style="aspect-ratio:16/9">
+          <video id="preview" controls playsinline style="width:100%;height:100%"></video>
+        </div>
+        <p class="lede tiny">Only you can see this. Once it screens it is gone unless it wins.</p>
+      </section>
+    </div>
+
+    <div>
+      <section class="panel">
+        <h2>Your submissions</h2>
+        <ul class="film-list" id="mine"></ul>
+      </section>
+      <section class="panel">
+        <h2>What happens next</h2>
+        <p class="lede">Approved films join the running order for the house that is currently filling.
+          When it fills — or when the guaranteed showtime arrives, whichever comes first — the doors
+          close and a public countdown starts.</p>
+        <p class="lede">At showtime everyone watches your film at the same second. They can throw roses
+          and tomatoes at it. Afterwards they vote. One film is kept; the rest are struck.</p>
+      </section>
+    </div>
+  </div>
+</div>
+<script src="/static/js/common.js"></script>
+<script src="/static/js/submit.js"></script>
+<script src="/static/js/dev.js"></script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+{
+  "name": "the-theater",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The Theater — user-submitted short films premiere in scheduled, synchronized, one-time-only screenings.",
+  "type": "commonjs",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node server/index.js",
+    "seed": "node server/seed.js --force",
+    "reset": "node server/seed.js --wipe"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.10.0",
+    "cookie-parser": "^1.4.7",
+    "express": "^5.2.1",
+    "multer": "^2.3.0",
+    "ws": "^8.18.0"
+  },
+  "overrides": {
+    "qs": "^6.16.0"
+  }
+}

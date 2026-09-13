@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Theater — Your stubs</title>
+<link rel="stylesheet" href="/static/css/theater.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🎫</text></svg>">
+</head>
+<body>
+<div class="marquee">Nobody here uses their real name.</div>
+<div class="wrap">
+  <div class="grid">
+    <div>
+      <section class="panel">
+        <h2>Who you are tonight</h2>
+        <p class="theater-no" id="handle">—</p>
+        <p class="lede">A pseudonym and a cookie. That is the whole account. Change it if you like —
+          past stubs keep the name they were issued under in the record.</p>
+        <label for="new-handle">New name</label>
+        <div class="chat-form">
+          <input type="text" id="new-handle" maxlength="32" placeholder="Second Balcony 12">
+          <button class="btn small" id="rename">Rename</button>
+        </div>
+        <div class="result-stats" style="margin-top:20px;justify-content:flex-start" id="counters"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Ticket stubs</h2>
+        <ul class="film-list" id="stubs"></ul>
+      </section>
+    </div>
+    <div>
+      <section class="panel">
+        <h2>Films submitted</h2>
+        <ul class="film-list" id="films"></ul>
+      </section>
+      <section class="panel">
+        <h2>Wins</h2>
+        <ul class="film-list" id="wins"></ul>
+      </section>
+    </div>
+  </div>
+</div>
+<script src="/static/js/common.js"></script>
+<script src="/static/js/profile.js"></script>
+<script src="/static/js/dev.js"></script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Theater — Moderation desk</title>
+<link rel="stylesheet" href="/static/css/theater.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🗂️</text></svg>">
+</head>
+<body>
+<div class="marquee">Staff only. Approve a film and it takes a slot in the house that is filling.</div>
+<div class="wrap">
+  <section class="panel" id="gate">
+    <h2>Moderation desk</h2>
+    <label for="key">Desk key</label>
+    <div class="chat-form">
+      <input type="text" id="key" placeholder="popcorn" autocomplete="off">
+      <button class="btn small" id="unlock">Unlock</button>
+    </div>
+    <p class="lede tiny">Default key is <code>popcorn</code> — override with the ADMIN_KEY environment variable.</p>
+  </section>
+
+  <div id="desk" class="hidden">
+    <section class="panel">
+      <h2>Queue</h2>
+      <div id="queue"></div>
+    </section>
+    <section class="panel">
+      <h2>Recently reviewed</h2>
+      <ul class="film-list" id="recent"></ul>
+    </section>
+    <section class="panel">
+      <h2>What the House Manager is doing</h2>
+      <div id="house"></div>
+    </section>
+  </div>
+</div>
+<script src="/static/js/common.js"></script>
+<script src="/static/js/slate.js"></script>
+<script src="/static/js/admin.js"></script>
+<script src="/static/js/dev.js"></script>
+</body>
+</html>
