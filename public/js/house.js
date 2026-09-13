@@ -46,6 +46,8 @@ function render(s) {
   $('#voting').style.display = st === 'VOTING' ? '' : 'none';
   $('#results').style.display = st === 'RESULTS' ? '' : 'none';
   $('#house-panel').style.display = s.house ? '' : 'none';
+  // The painted house wants the whole width while the reel is rolling.
+  $('.grid').classList.toggle('showing', showing);
   $('#chat-title').textContent = showing ? 'The room' : st === 'VOTING' ? 'Closing arguments' : 'Hype';
 
   if (s.house) {

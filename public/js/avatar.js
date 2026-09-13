@@ -1,63 +1,49 @@
 /* =============================================================================
- * AVATARS
- * A little figure for every person in the building. You get one the moment you
- * buy a ticket or drop a film in a poster frame; it walks you through the doors
- * and down the aisle to your seat.
+ * AVATARS — sprite edition
+ * Every person in the building is a small walking figure cut from a licensed
+ * Adobe Stock walk cycle (7 frames), recoloured into six coats at build time
+ * (see public/art/walk_sheet.png). The sheet faces left; a figure moving
+ * right is mirrored.
  *
- * Everyone else in the house is a figure too — real patrons and ambient extras
- * alike, drawn identically so nobody can tell which is which (see seats.js).
+ * Real patrons and ambient extras are drawn identically; only you get a glow
+ * and a label, so nobody can count the real ones.
  * ========================================================================== */
 
 const Avatar = (() => {
-  /* Deterministic look per person, so the same handle is always the same coat. */
+  const ROWS = 6;   // coats in the sheet: blue, red, gold, green, violet, cream
+
   function hash(str) {
     let h = 2166136261;
     for (let i = 0; i < String(str).length; i++) {
       h ^= String(str).charCodeAt(i);
       h = Math.imul(h, 16777619);
     }
-    return (h >>> 0);
+    return h >>> 0;
   }
-
-  const COATS = ['#7d1f2e', '#2f4858', '#4a3f6b', '#1f4d3f', '#6b4423', '#5c2a4a',
-    '#2b3a55', '#734b2a', '#3d5a4c', '#5a2f3d', '#40405c', '#663d2e'];
-  const SKINS = ['#e8c9a8', '#c98f5f', '#8d5a3b', '#f0d6bb', '#6f4227', '#dba97e'];
-  const HATS = ['#1a1216', '#2a1a20', null, null, '#3a2a1f', null];
-
   function look(key) {
     const h = hash(key);
-    return {
-      coat: COATS[h % COATS.length],
-      skin: SKINS[(h >> 5) % SKINS.length],
-      hat: HATS[(h >> 9) % HATS.length],
-      lean: ((h >> 13) % 7) - 3,
-    };
+    return { row: h % ROWS, coat: ['#3b8fd9', '#c1121f', '#e8c07d', '#3f9c62', '#7b4fb8', '#e6e1d8'][h % ROWS],
+      skin: ['#e8c9a8', '#c98f5f', '#8d5a3b', '#f0d6bb', '#6f4227', '#dba97e'][(h >> 5) % 6] };
   }
 
-  /** Build a standing figure. `key` decides its appearance. */
-  function make(key, { you = false, scale = 1, label = null } = {}) {
+  /** A standing figure. `scale` is relative to the 49×100 sprite frame. */
+  function make(key, { you = false, scale = 0.7, label = null, row = null } = {}) {
     const l = look(key);
     const node = document.createElement('div');
     node.className = 'avatar' + (you ? ' you' : '');
-    node.style.setProperty('--coat', l.coat);
-    node.style.setProperty('--skin', l.skin);
+    node.style.setProperty('--row', row ?? (you ? 2 : l.row));   // you wear the gold coat
     node.style.setProperty('--scale', scale);
-    node.innerHTML =
-      (l.hat ? `<i class="hat" style="background:${l.hat}"></i>` : '') +
-      (you ? '<i class="halo"></i>' : '') +
-      '<i class="head"></i><i class="body"></i>' +
-      '<i class="leg l"></i><i class="leg r"></i>';
+    node.innerHTML = (you ? '<i class="halo"></i>' : '') + '<i class="sprite"></i>';
     if (label) {
       const tag = document.createElement('b');
       tag.className = 'avatar-label';
       tag.textContent = label;
       node.appendChild(tag);
     }
-    node.title = you ? 'You' : '';
     return node;
   }
 
-  /** Just the head and shoulders, for someone sitting in a seat. */
+  /** Head and shoulders for the seat map. */
   function seated(key, you = false) {
     const l = look(key);
     const node = document.createElement('i');
@@ -67,44 +53,36 @@ const Avatar = (() => {
     return node;
   }
 
-  /**
-   * Walk a figure from one point to another, in px, inside its offset parent.
-   * Resolves when it arrives. Purely cosmetic — nothing waits on it but the eye.
-   */
-  function walk(node, from, to, { duration = 1400, faceOnly = false } = {}) {
+  /** Walk from one point to another (px, in the offset parent). Resolves on arrival. */
+  function walk(node, from, to, { duration = 1400 } = {}) {
     return new Promise((resolve) => {
       const dx = to.x - from.x, dy = (to.y ?? from.y) - from.y;
       node.style.left = `${from.x}px`;
-      node.style.top = `${from.y}px`;
+      if (from.y != null && to.y != null) node.style.top = `${from.y}px`;
       node.classList.add('walking');
-      node.classList.toggle('mirrored', dx < 0);
+      node.classList.toggle('facing-right', dx > 0);
       const anim = node.animate(
         [{ transform: 'translate(0,0)' }, { transform: `translate(${dx}px, ${dy}px)` }],
-        { duration, easing: faceOnly ? 'linear' : 'cubic-bezier(.4,0,.5,1)', fill: 'forwards' },
+        { duration, easing: 'linear', fill: 'forwards' },
       );
-      anim.onfinish = () => {
-        node.classList.remove('walking');
-        resolve();
-      };
+      anim.onfinish = () => { node.classList.remove('walking'); resolve(); };
     });
   }
 
-  /** A handful of people loitering on the sidewalk, drifting back and forth. */
+  /** People loitering on the pavement, in two loose clusters either side of you. */
   function loiterers(seed, count, bounds) {
     const out = [];
+    const span = bounds.x1 - bounds.x0;
     for (let i = 0; i < count; i++) {
       const key = `${seed}:${i}`;
       const h = hash(key);
-      const node = make(key, { scale: 0.82 + ((h >> 3) % 30) / 100 });
+      const node = make(key, { scale: 0.62 + ((h >> 3) % 20) / 100 });
       node.classList.add('loiterer');
-      // Two loose clusters, so nobody is standing on top of you in the middle.
-      const span = bounds.x1 - bounds.x0;
+      if (h & 1) node.classList.add('facing-right');
       const t = (h % 1000) / 1000;
-      const x = i % 2 === 0
-        ? bounds.x0 + t * span * 0.34
-        : bounds.x0 + span * 0.62 + t * span * 0.3;
+      const x = i % 2 === 0 ? bounds.x0 + t * span * 0.3 : bounds.x0 + span * 0.64 + t * span * 0.3;
       node.style.left = `${x}px`;
-      node.style.bottom = `${30 + ((h >> 7) % 10)}px`;
+      node.style.bottom = `${18 + ((h >> 7) % 10)}px`;
       node.style.setProperty('--drift', `${8 + (h % 22)}px`);
       node.style.setProperty('--dur', `${7 + (h % 9)}s`);
       node.style.setProperty('--delay', `${-((h >> 11) % 9)}s`);

@@ -11,44 +11,34 @@
 <body>
 
 <div class="street" id="street">
-  <i class="sky"></i>
+  <div class="stage" id="stage">
+    <i class="dusk"></i>
 
-  <div class="facade">
-    <div class="marquee-sign">
+    <div class="hot sign">
       <div class="sign-name">The Theater</div>
       <div class="sign-now" id="sign-now">—</div>
       <div class="sign-when" id="sign-when"></div>
     </div>
 
-    <div class="facade-wall">
-      <div class="poster-wall" id="posters"></div>
-    </div>
+    <div class="hot window l" id="window-l"></div>
+    <div class="hot window r" id="window-r"></div>
 
-    <div class="frontage">
-      <div class="box-office" id="box-office" title="Buy a seat">
-        <div class="bo-sign">Box Office</div>
-        <div class="bo-window">
-          <span class="bo-price" id="bo-price">$1</span>
-          <i class="bo-grille"></i>
-        </div>
-        <div class="bo-note" id="bo-note">one seat, please</div>
-        <div class="shutter">sold out</div>
-      </div>
+    <div class="hot board" id="board"></div>
 
-      <div class="entrance" id="entrance" title="The doors">
-        <i class="inside"></i>
-        <i class="transom"></i>
-        <div class="door l"></div>
-        <div class="door r"></div>
-        <i class="threshold"></i>
-        <div class="door-label" id="door-label">ticket holders only</div>
-      </div>
-
-      <div class="placard" id="placard"></div>
-    </div>
+    <div class="hot door l" id="door-l" title="The doors"><i class="glow"></i><div class="door-label" id="door-label">ticket holders only</div></div>
+    <div class="hot door r" id="door-r" title="The doors"><i class="glow"></i></div>
   </div>
 
   <div class="sidewalk" id="sidewalk">
+    <div class="kiosk" id="kiosk" title="Buy a seat">
+      <div class="roof"></div>
+      <div class="body">
+        <div class="k-sign">Box office</div>
+        <div class="k-window" id="k-price">$1</div>
+        <div class="k-note" id="k-note">one seat, please</div>
+        <div class="shutter">sold out</div>
+      </div>
+    </div>
     <div class="you-are-here" id="street-note">you are standing on the sidewalk</div>
   </div>
 </div>
@@ -60,23 +50,16 @@
       <ul class="film-list" id="programme"></ul>
       <p class="lede tiny" id="bill-note"></p>
     </section>
-
     <section class="panel">
       <h2>House rules</h2>
-      <p class="lede">
-        Every film screens <b>once</b>. Everyone watches the same frame at the same second —
-        no pause, no scrub, no replay, no catching up later.
-      </p>
-      <p class="lede">
-        Drop a film in an empty frame out front, or buy a seat at the window. Either way you walk
-        in and sit down. When the house is ready the doors close and a public countdown starts.
-      </p>
-      <p class="lede">
-        Afterwards the audience votes Best Picture. The winner is kept forever in the Hall of Fame;
-        every other print is struck and survives only as a statistic.
-      </p>
-      <p class="lede tiny">The House Manager sizes each theater to real demand — a quiet night gets
-        a small room — and there is a guaranteed showtime every day regardless.</p>
+      <p class="lede">Every film screens <b>once</b>. Everyone watches the same frame at the same second —
+        no pause, no scrub, no replay, no catching up later.</p>
+      <p class="lede">Drop a film into an empty frame in the window, or buy a seat at the box office. Either
+        way you walk in and sit down. When the house is ready the doors close and a public countdown starts.</p>
+      <p class="lede">Afterwards the audience votes Best Picture. The winner is kept forever in the Hall of Fame;
+        every other print is struck and survives only as a statistic.</p>
+      <p class="lede tiny">The House Manager sizes each theater to real demand — a quiet night gets a small
+        room — and there is a guaranteed showtime every day regardless.</p>
     </section>
   </div>
 </div>

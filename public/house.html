@@ -31,21 +31,24 @@
       </section>
 
       <!-- SCREENING -->
-      <section class="panel auditorium" id="showing" style="display:none">
-        <div class="screen" id="screen">
-          <video id="video" playsinline muted preload="auto" style="display:none"></video>
-          <canvas id="canvas"></canvas>
+      <section class="auditorium" id="showing" style="display:none">
+        <div class="house-plate" id="screen">
+          <i class="beam"></i>
+          <div class="picture">
+            <video id="video" playsinline muted preload="auto" style="display:none"></video>
+            <canvas id="canvas"></canvas>
+          </div>
           <div class="overlay" id="overlay"></div>
           <div class="no-controls">no pause · no scrub · no replay</div>
+          <div class="tally" id="tally"></div>
           <div class="now-showing"><small id="ns-label">Now showing</small><span id="ns-title"></span></div>
+          <div class="throw-row">
+            <button class="throw" id="throw-rose" title="Throw a rose">🌹</button>
+            <button class="btn ghost small" id="sound">🔇 Sound off</button>
+            <button class="throw" id="throw-tomato" title="Throw a tomato">🍅</button>
+          </div>
           <div class="reel-progress"><i id="reel-bar" style="width:0%"></i></div>
         </div>
-        <div class="throw-row">
-          <button class="throw" id="throw-rose" title="Throw a rose">🌹</button>
-          <button class="btn ghost small" id="sound">🔇 Sound off</button>
-          <button class="throw" id="throw-tomato" title="Throw a tomato">🍅</button>
-        </div>
-        <div class="tally" id="tally"></div>
       </section>
 
       <!-- BALLOT -->

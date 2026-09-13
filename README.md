@@ -28,8 +28,9 @@ house already filling, a crowd, and a film waiting at the moderation desk.
 
 ## Standing outside
 
-The front page is not a dashboard, it is a place. You are a small figure on a sidewalk looking at
-a lit marquee, a row of poster frames, a box office window and a pair of doors.
+The front page is not a dashboard, it is a place. You are a small walking figure on a sidewalk in
+front of a painted cinema at dusk — a lit marquee, two shop windows with poster frames in them, a
+box office kiosk and a pair of doors with light behind them.
 
 There are exactly two ways in, and both of them walk you through those doors:
 
@@ -39,13 +40,32 @@ There are exactly two ways in, and both of them walk you through those doors:
   that moment.
 - **Buy a seat at the window.** Click the box office, pay the stub $1, done.
 
-Either way your figure walks to the doors, they swing open, and you come back up inside the
-auditorium — where you walk down the aisle and sit in the chair the box office gave you. The gold
-head in the crowd is you.
+Either way your figure walks to the nearer door, the doorway lights up, and you come back up inside
+the auditorium — where you walk down the aisle and sit in the chair the box office gave you. The
+gold head in the crowd is you.
 
-The facade is the status display, so there is nothing else to read: the marquee says what is
-happening and counts down to curtain, the poster frames are the programme, the shutter comes down
-over the window when the doors close, and light spills onto the pavement while a film is running.
+The building is the status display, so there is nothing else to read: the marquee says what is
+happening, the board between the doors counts down to curtain, the frames in the windows are the
+programme, the shutter comes down over the kiosk when the doors close, and light spills onto the
+pavement while a film is running. During the screening the film plays inside the painted screen
+of an illustrated auditorium, with roses and tomatoes flying over the audience in front of it.
+
+## The art
+
+The scene plates and the walking figure are licensed Adobe Stock vector illustrations (free
+collection, standard license), pulled through the Adobe connector, rasterised with Ghostscript
+and reworked in Pillow/NumPy — nothing was hand-drawn and no generative model was used:
+
+| File | Source | What was done |
+|---|---|---|
+| `public/art/facade.jpg` | Adobe Stock #426627839, *Cinema building vector illustration on background of city at night* | rendered from the .ai, right half mirrored from the left to remove the parked cars, cropped to the theater block, night-graded (windows kept lit) |
+| `public/art/auditorium.jpg` | Adobe Stock #304236895, *Audience sitting in a vintage cinema theatre* | rendered from the .ai, blue room re-hued to the house purple |
+| `public/art/walk_sheet.png` | Adobe Stock #1323562015, *walking step cycle sequence* | seven frames cut out, shirt recoloured into six coats, packed as a sprite sheet |
+
+The interactive hotspots (`public/css/street.css`) are percentages measured off the plate, so the
+clickable doors, windows and board stay glued to the painting at any width. A Canva-generated
+"Next Attraction" placeholder poster was also produced but could not be exported from this
+environment; the design lives at <https://www.canva.com/d/AH4T4FIhrlSdBJf>.
 
 ## Demo the whole loop in two minutes
 
@@ -132,8 +152,9 @@ server/
 public/
   street.html      ← out front: marquee, poster frames, box office, doors
   house.html       ← the auditorium: countdown, screening, ballot, verdict
-  js/avatar.js     ← the little figures, and the walk to your seat
+  js/avatar.js     ← the sprite figures, and the walk to your seat
   js/slate.js      ← procedural films, title cards and poster art
+  art/             ← the licensed scene plates and sprite sheet
   …                ← submit, hall of fame, profile, moderation desk
 assets/demo/       ← three short clips used to seed real video
 ```

@@ -41,9 +41,9 @@ function render(s) {
   $('#sign-now').className = 'sign-now ' + cls;
   renderSignWhen(s);
   renderPosters(s);
+  renderBoard(s);
   renderBoxOffice(s);
   renderEntrance(s);
-  renderPlacard(s);
   renderSidewalk(s);
   renderBill(s);
 }
@@ -72,7 +72,8 @@ function renderSignWhen(s) {
 
 /* ---------- poster frames: the programme, and the way in for filmmakers ---- */
 function renderPosters(s) {
-  const wall = $('#posters');
+  const wall = $('#window-r');
+  const wallL = $('#window-l');
   const entries = s.reel ? s.reel.entries.map((e) => ({
     filmId: e.filmId, title: e.title, by: e.by, order: e.order, slate: e.slate,
   })) : s.programme.map((p) => ({ filmId: p.id, title: p.title, by: p.by, order: p.order }));
@@ -85,16 +86,18 @@ function renderPosters(s) {
   const sig = entries.map((e) => e.filmId).join(',') + `|${slots}|${open}|${pending ? pending.id : ''}`;
   if (wall.dataset.sig === sig) return;
   wall.dataset.sig = sig;
-  wall.innerHTML = '';
+  wall.innerHTML = ''; wallL.innerHTML = '';
 
-  for (const e of entries) wall.appendChild(filledFrame(e, s));
-  if (pending) wall.appendChild(filledFrame(
-    { filmId: pending.id, title: pending.title, by: 'you', order: null }, s, 'at the desk',
-  ));
-  if (open) {
-    const empties = Math.max(1, Math.min(slots - entries.length, 4));
-    for (let i = 0; i < empties; i++) wall.appendChild(emptyFrame());
-  }
+  // Four frames across the two windows: the bill first, then your pending
+  // print, then empty frames while the doors are open. Anything past four
+  // is a chip, not a frame.
+  const frames = [];
+  for (const e of entries) frames.push(filledFrame(e, s));
+  if (pending) frames.push(filledFrame({ filmId: pending.id, title: pending.title, by: 'you', order: null }, s, 'at the desk'));
+  if (open) for (let i = frames.length; i < Math.min(4, Math.max(frames.length + 1, slots)); i++) frames.push(emptyFrame());
+  const overflow = entries.length - 4;
+  frames.slice(0, 4).forEach((f, i) => (i < 2 ? wallL : wall).appendChild(f));
+  if (overflow > 0) wall.appendChild(el('span', 'more-chip', `+${overflow} more`));
 }
 
 function filledFrame(entry, s, badge) {
@@ -113,7 +116,7 @@ function filledFrame(entry, s, badge) {
 
 function emptyFrame() {
   const frame = el('div', 'poster-frame empty');
-  frame.innerHTML = '<span class="plus">+</span><span>drop a film here<br>15–60s · mp4 / webm</span>';
+  frame.innerHTML = '<span class="plus">+</span><span>drop a<br>film</span>';
   frame.onclick = () => pickFile();
   frame.ondragover = (e) => { e.preventDefault(); frame.classList.add('drag-over'); };
   frame.ondragleave = () => frame.classList.remove('drag-over');
@@ -126,20 +129,35 @@ function emptyFrame() {
   return frame;
 }
 
-/* ---------- the window ---------- */
+/* ---------- the board between the doors ---------- */
+function renderBoard(s) {
+  const st = s.theater.state;
+  const b = $('#board');
+  if (st === 'DOORS_CLOSED') {
+    clearInterval(window._boardTimer);
+    const tick = () => {
+      const left = s.theater.showtimeAt - hall.now();
+      b.innerHTML = `Curtain in<b>${clockString(Math.max(0, left))}</b><small>theater #${s.theater.number}</small>`;
+    };
+    tick(); window._boardTimer = setInterval(tick, 500);
+    return;
+  }
+  clearInterval(window._boardTimer);
+  if (st === 'SHOWING') b.innerHTML = `Now<br>showing<small>join in progress</small>`;
+  else if (st === 'VOTING') b.innerHTML = `Ballot<br>open<small>best picture</small>`;
+  else if (st === 'RESULTS') b.innerHTML = `The<br>verdict<small>hall of fame</small>`;
+  else if (st === 'OPEN_CALL') b.innerHTML = `Open<br>call<small>bring a film</small>`;
+  else b.innerHTML = `Tonight<b>${s.slots.filled}/${s.slots.total}</b><small>films on the bill</small>`;
+}
+
+/* ---------- the box office kiosk ---------- */
 function renderBoxOffice(s) {
-  const bo = $('#box-office');
+  const bo = $('#kiosk');
   const open = ['FILLING', 'OPEN_CALL'].includes(s.theater.state);
   const ticket = s.you.ticket;
-  $('#bo-price').textContent = `$${(s.prices.audienceCents / 100).toFixed(2)}`;
+  $('#k-price').textContent = `$${(s.prices.audienceCents / 100).toFixed(2)}`;
   bo.classList.toggle('closed', !open);
-  if (ticket) {
-    $('#bo-note').textContent = 'you have a ticket';
-  } else if (open) {
-    $('#bo-note').textContent = 'one seat, please';
-  } else {
-    $('#bo-note').textContent = 'window closed';
-  }
+  $('#k-note').textContent = ticket ? 'you have a ticket' : open ? 'one seat, please' : 'window closed';
   bo.onclick = () => {
     if (!open) return toast('The window is shut for this one. The next house opens shortly.');
     if (ticket) return toast('You are already holding a ticket. Walk in.');
@@ -149,44 +167,17 @@ function renderBoxOffice(s) {
 
 /* ---------- the doors ---------- */
 function renderEntrance(s) {
-  const door = $('#entrance');
   const st = s.theater.state;
   const ticket = s.you.ticket;
   const showing = ['SHOWING', 'VOTING', 'RESULTS'].includes(st);
-  door.classList.toggle('open', showing || !!ticket);
+  for (const door of [$('#door-l'), $('#door-r')]) {
+    door.classList.toggle('open', showing || !!ticket);
+    door.classList.toggle('spill', showing);
+    door.onclick = () => enterTheater(ticket ? 'to your seat' : 'this way');
+  }
   $('#door-label').textContent = showing
     ? (ticket ? 'in progress — go in' : 'in progress — watch from the back')
     : ticket ? 'this way to your seat' : 'ticket holders only';
-  door.onclick = () => enterTheater(ticket ? 'to your seat' : 'this way');
-}
-
-/* ---------- the placard by the door ---------- */
-function renderPlacard(s) {
-  const st = s.theater.state;
-  const ticket = s.you.ticket;
-  const box = $('#placard');
-  let head = 'Tonight', body = '';
-  if (ticket) {
-    head = 'Your ticket';
-    body = `<p class="big">${ticket.kind === 'FILMMAKER' ? 'Filmmaker' : 'Audience'}</p>
-      <p>${ticket.source === 'comp_rejected'
-        ? 'Comped after your last submission was turned down.'
-        : 'Seat held. Your chair is the gold one.'}</p>
-      <p>Walk in whenever you like — the doors are open to you.</p>`;
-  } else if (st === 'OPEN_CALL') {
-    body = `<p class="big">Open call</p><p>No programme yet. Drop a film in an empty frame and
-      the evening starts with you.</p>`;
-  } else if (st === 'FILLING') {
-    body = `<p class="big">Tickets on sale</p><p>Buy a seat at the window, or bring a film and the
-      seat is free.</p>`;
-  } else if (st === 'DOORS_CLOSED') {
-    body = `<p class="big">Doors closed</p><p>No more tickets for this one. You can still stand at
-      the back — or wait for the next house.</p>`;
-  } else {
-    body = `<p class="big">In progress</p><p>Late arrivals join where everyone else already is.
-      Nothing rewinds.</p>`;
-  }
-  box.innerHTML = `<h4>${head}</h4>${body}`;
 }
 
 /* ---------- the sidewalk ---------- */
@@ -197,14 +188,14 @@ function renderSidewalk(s) {
     crowdSeed = seed;
     $$('.avatar', walk).forEach((a) => a.remove());
     const width = walk.clientWidth || 900;
-    for (const node of Avatar.loiterers(seed, 5, { x0: width * 0.06, x1: width * 0.86 })) {
+    for (const node of Avatar.loiterers(seed, 6, { x0: width * 0.19, x1: width * 0.9 })) {
       walk.appendChild(node);
     }
     you = null;
   }
   if (!you) {
-    you = Avatar.make(s.you.id || 'you', { you: true, label: 'you' });
-    you.style.left = `${(walk.clientWidth || 900) * 0.5 - 10}px`;
+    you = Avatar.make(s.you.id || 'you', { you: true, label: 'you', scale: 0.78 });
+    you.style.left = `${(walk.clientWidth || 900) * 0.5 - 19}px`;
     walk.appendChild(you);
   }
   $('#street-note').textContent = s.you.ticket
@@ -242,18 +233,20 @@ async function enterTheater(word = 'this way') {
   if (entering) return;
   entering = true;
   const walk = $('#sidewalk');
-  const door = $('#entrance');
-  door.classList.add('open');
+  const doors = [$('#door-l'), $('#door-r')];
+  doors.forEach((d) => d.classList.add('open'));
 
   if (you) {
     const wr = walk.getBoundingClientRect();
-    const dr = door.getBoundingClientRect();
-    const from = { x: parseFloat(you.style.left) || 0, y: 0 };
-    const to = { x: dr.left - wr.left + dr.width / 2 - 10, y: -18 };
+    const from = { x: parseFloat(you.style.left) || 0 };
+    const mid = doors.map((d) => { const r = d.getBoundingClientRect(); return r.left - wr.left + r.width / 2 - 19; });
+    const to = { x: Math.abs(mid[0] - from.x) < Math.abs(mid[1] - from.x) ? mid[0] : mid[1] };
     you.querySelector('.avatar-label')?.remove();
-    await Avatar.walk(you, from, to, { duration: 1100 });
+    await Avatar.walk(you, from, to, { duration: Math.max(500, Math.abs(to.x - from.x) * 6) });
+    you.classList.add('walking');
+    you.style.transition = 'opacity .5s, transform .5s';
     you.style.opacity = '0';
-    you.style.transition = 'opacity .35s';
+    you.style.transform = 'translateY(-14px) scale(.9)';
   }
   $('#wipe-word').textContent = word;
   $('#enter-wipe').classList.add('on');
@@ -366,7 +359,7 @@ async function offerFilm(file, frame) {
 function upload(file, meta, frame) {
   if (frame) {
     frame.classList.add('uploading');
-    frame.innerHTML = `<span class="plus">🎞️</span><span>${meta.title}</span><div class="up-bar"><i></i></div>`;
+    frame.innerHTML = `<span class="plus">🎞️</span><span>${meta.title.slice(0, 18)}</span><div class="up-bar"><i></i></div>`;
   }
   const body = new FormData();
   body.append('video', file);
@@ -385,16 +378,16 @@ function upload(file, meta, frame) {
   xhr.onload = () => {
     let data = {}; try { data = JSON.parse(xhr.responseText); } catch {}
     if (xhr.status >= 200 && xhr.status < 300) {
-      $('#posters').dataset.sig = '';
+      $('#window-r').dataset.sig = '';
       toast('In the frame. The desk will look at it — your seat is held.');
       enterTheater('take your seat');
     } else {
       toast(data.error || 'The projectionist dropped it.', true);
-      $('#posters').dataset.sig = '';
+      $('#window-r').dataset.sig = '';
       if (S) renderPosters(S);
     }
   };
-  xhr.onerror = () => { toast('Upload failed.', true); $('#posters').dataset.sig = ''; if (S) renderPosters(S); };
+  xhr.onerror = () => { toast('Upload failed.', true); $('#window-r').dataset.sig = ''; if (S) renderPosters(S); };
   xhr.send(body);
 }
 
