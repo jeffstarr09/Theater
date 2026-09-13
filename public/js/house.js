@@ -36,18 +36,18 @@ function render(s) {
   const st = s.theater.state;
   const copy = STATE_COPY[st] || STATE_COPY.FILLING;
   $('#marquee').innerHTML = marqueeText(s);
-  $('#theater-no').textContent = `Theater #${s.theater.number}`;
-  $('#state-pill').textContent = copy.label;
-  $('#state-pill').className = 'pill ' + copy.pill;
 
   const showing = st === 'SHOWING';
-  $('#pre').style.display = ['FILLING', 'OPEN_CALL', 'DOORS_CLOSED'].includes(st) ? '' : 'none';
+  const pre = ['FILLING', 'OPEN_CALL', 'DOORS_CLOSED'].includes(st);
+  $('#pre').style.display = pre ? '' : 'none';
+  $('#chart-panel').style.display = pre ? '' : 'none';
   $('#showing').style.display = showing ? '' : 'none';
   $('#voting').style.display = st === 'VOTING' ? '' : 'none';
   $('#results').style.display = st === 'RESULTS' ? '' : 'none';
   $('#house-panel').style.display = s.house ? '' : 'none';
   // The painted house wants the whole width while the reel is rolling.
   $('.grid').classList.toggle('showing', showing);
+  $('.grid').classList.toggle('pre', pre);
   $('#chat-title').textContent = showing ? 'The room' : st === 'VOTING' ? 'Closing arguments' : 'Hype';
 
   if (s.house) {
@@ -60,7 +60,6 @@ function render(s) {
   }
 
   renderPre(s);
-  renderCountdown(s);
   renderProgramme(s);
   if (st === 'VOTING') renderBallot(s);
   if (st === 'RESULTS') renderResults(s);
@@ -69,50 +68,62 @@ function render(s) {
 function renderPre(s) {
   const st = s.theater.state;
   renderSeatMap($('#seatmap'), s.seatMap, `t${s.theater.number}`);
+  $('#mood').textContent = s.seatMap.mood;
   const mine = $('.seat.you', $('#seatmap'));
   if (mine) { mine.title = 'Your seat — tap for your stubs'; mine.onclick = () => { location.href = '/me'; }; }
-  arrivalWalk(s);
-  $('#mood').textContent = s.seatMap.mood;
+  arrive();
+
   const actions = $('#pre-actions');
   actions.innerHTML = '';
+  $('#pre-label').textContent = `Theater #${s.theater.number} · ${(STATE_COPY[st] || STATE_COPY.FILLING).label}`;
   if (st === 'DOORS_CLOSED') {
     $('#pre-note').textContent = s.you.ticket
-      ? 'You are seated. Stay here — the reel starts on its own.'
-      : 'Ticketless, but you may watch from the back. The doors are closed for this one.';
+      ? 'You are in your seat. The reel starts on its own.'
+      : 'Standing room at the back. The doors are closed for this one.';
   } else {
     $('#pre-note').textContent = st === 'OPEN_CALL'
       ? 'No programme yet. The frames out front are empty — there is a guaranteed showtime regardless.'
-      : 'Still filling. Buy a seat at the window out front, or wait here.';
-    const a = el('a', 'btn', 'Back outside');
+      : s.you.ticket ? 'Settle in. The house is still filling.' : 'Still filling. The box office is out front.';
+    const a = el('a', 'btn small', 'Back outside');
     a.href = '/';
     actions.appendChild(a);
-    const b = el('a', 'btn ghost', 'Submit a film');
-    b.href = '/submit';
-    actions.appendChild(b);
   }
+  drawPreScreen(s);
 }
 
-/* The clock on the wall before the show. Server time, not local time. */
-function renderCountdown(s) {
-  clearInterval(window._cd);
-  const node = $('#countdown');
-  const sub = $('#countdown-sub');
-  if (s.theater.state !== 'DOORS_CLOSED') {
-    node.style.display = 'none';
-    sub.textContent = '';
-    return;
-  }
-  node.style.display = '';
-  const tick = () => {
-    const left = s.theater.showtimeAt - hall.now();
-    node.textContent = clockString(left);
-    node.classList.toggle('urgent', left < 60000);
-    sub.textContent = left > 0
-      ? `until showtime · ${timeOfDay(s.theater.showtimeAt)}${s.theater.guaranteed ? ' · guaranteed' : ''}`
-      : 'the reel is starting';
+/* What is on the screen before the show: the house slate, with the clock. */
+let preTimer = null;
+function drawPreScreen(s) {
+  clearInterval(preTimer);
+  const canvas = $('#pre-canvas');
+  const draw = () => {
+    const ctx = canvas.getContext('2d');
+    const { w, h } = Slate.fit(canvas);
+    const t = hall.now();
+    ctx.fillStyle = '#05030a'; ctx.fillRect(0, 0, w, h);
+    // a slow iris of house colour, so the screen is never dead
+    const g = ctx.createRadialGradient(w / 2, h / 2, h * 0.05, w / 2, h / 2, h * 0.9);
+    g.addColorStop(0, `hsla(${(t / 40) % 360}, 80%, 55%, .28)`); g.addColorStop(0.5, `hsla(${(t / 40 + 120) % 360}, 80%, 45%, .14)`); g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#b08c62'; ctx.font = `${Math.round(h * 0.05)}px ui-monospace, monospace`;
+    ctx.fillText(`THEATER #${s.theater.number}`, w / 2, h * 0.22);
+    if (s.theater.state === 'DOORS_CLOSED') {
+      const left = Math.max(0, s.theater.showtimeAt - t);
+      ctx.fillStyle = '#ffe9c0'; ctx.font = `${Math.round(h * 0.22)}px ui-monospace, monospace`;
+      ctx.fillText(clockString(left), w / 2, h * 0.56);
+      ctx.fillStyle = '#ff6fb7'; ctx.font = `${Math.round(h * 0.05)}px ui-monospace, monospace`;
+      ctx.fillText(left > 0 ? 'UNTIL CURTAIN' : 'ROLLING', w / 2, h * 0.7);
+    } else {
+      ctx.fillStyle = '#ffe9c0'; ctx.font = `${Math.round(h * 0.11)}px Georgia, serif`;
+      ctx.fillText(s.theater.state === 'OPEN_CALL' ? 'Open call' : 'Now filling', w / 2, h * 0.5);
+      ctx.fillStyle = '#ff6fb7'; ctx.font = `${Math.round(h * 0.05)}px ui-monospace, monospace`;
+      ctx.fillText(`${s.slots.filled} / ${s.slots.total} FILMS ON THE BILL`, w / 2, h * 0.66);
+      if (s.marquee) { ctx.fillStyle = '#b08c62'; ctx.fillText(`GUARANTEED ${timeOfDay(s.marquee.at).toUpperCase()}`, w / 2, h * 0.8); }
+    }
   };
-  tick();
-  window._cd = setInterval(tick, 250);
+  draw();
+  preTimer = setInterval(draw, 250);
 }
 
 function renderProgramme(s) {
@@ -140,30 +151,13 @@ function renderProgramme(s) {
  * sit in the chair the box office gave you. Purely cosmetic; nothing waits.
  * ------------------------------------------------------------------------ */
 let arrived = false;
-async function arrivalWalk(s) {
+function arrive() {
   if (arrived || !new URLSearchParams(location.search).has('arrive')) return;
-  if (s.seatMap.youIndex < 0 || $('#pre').style.display === 'none') return;
   arrived = true;
   history.replaceState({}, '', '/house');
-
-  const stage = $('#seatmap');
-  const seat = $$('.seat', stage)[s.seatMap.youIndex];
-  if (!seat) return;
-  const sr = stage.getBoundingClientRect(), tr = seat.getBoundingClientRect();
-
-  const me = Avatar.make(s.you.id || 'you', { you: true, scale: 0.62, label: 'you' });
-  me.id = 'aisle-walker';
-  stage.appendChild(me);
-  seat.style.visibility = 'hidden';
-
-  const from = { x: sr.width / 2 - 8, y: sr.height + 14 };
-  const to = { x: tr.left - sr.left + tr.width / 2 - 8, y: tr.top - sr.top - 22 };
-  toast('Down the aisle — the gold seat is yours.');
-  await Avatar.walk(me, from, to, { duration: 1500 });
-  seat.style.visibility = '';
-  me.style.transition = 'opacity .4s';
-  me.style.opacity = '0';
-  setTimeout(() => me.remove(), 450);
+  const plate = $('#pre-plate');
+  plate.classList.add('arriving');
+  toast('Your seat is the gold one on the chart.');
 }
 
 /* ---------------------------------------------------------------------------

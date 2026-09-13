@@ -127,9 +127,12 @@ function requirements(theater) {
   const steps = theater.decay_steps || 0;
   const minFilms = Math.max(A.minFilmsFloor, Math.round(plan.minFilms - steps * A.filmsDecayStep));
   const seatQuorum = Math.max(A.seatQuorumFloor, plan.seatQuorum - steps * A.seatQuorumDecayStep);
+  // A growing room must never move the finish line away from the people
+  // already inside it: the seat requirement is capped at the lowest value it
+  // has ever had for this theater (plan.seatsNeededCap, maintained by replan).
+  const seatsNeeded = Math.max(1, Math.min(Math.ceil(plan.seats * seatQuorum), plan.seatsNeededCap ?? Infinity));
   return {
-    plan, steps, minFilms, seatQuorum,
-    seatsNeeded: Math.max(1, Math.ceil(plan.seats * seatQuorum)),
+    plan, steps, minFilms, seatQuorum, seatsNeeded,
     atFloor: minFilms <= A.minFilmsFloor && seatQuorum <= A.seatQuorumFloor
       && plan.seats <= POLICY.shape.minSeatsEver,
   };
@@ -485,6 +488,10 @@ function replan(theater, demand, now) {
     minFilms: Math.min(old.minFilms, fresh.minFilms),
     seatQuorum: Math.min(old.seatQuorum, fresh.seatQuorum),
   };
+  merged.seatsNeededCap = Math.min(
+    old.seatsNeededCap ?? Math.ceil(old.seats * old.seatQuorum),
+    Math.ceil(merged.seats * merged.seatQuorum),
+  );
   if (JSON.stringify(merged) !== JSON.stringify(old)) {
     db.prepare('UPDATE theaters SET plan_json = ?, tier = ? WHERE id = ?')
       .run(JSON.stringify(merged), merged.tier, theater.id);

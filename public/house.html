@@ -14,20 +14,16 @@
 <div class="wrap">
   <div class="grid">
     <div>
-      <!-- PRE-SHOW -->
-      <section class="panel" id="pre">
-        <div class="state-line">
-          <h2 style="margin:0">The house</h2>
-          <span class="pill" id="state-pill">—</span>
+      <!-- PRE-SHOW: you are in your seat, looking at the screen -->
+      <section class="auditorium" id="pre">
+        <div class="house-plate" id="pre-plate">
+          <i class="trip"></i>
+          <i class="beam"></i>
+          <div class="picture"><canvas id="pre-canvas"></canvas></div>
+          <div class="overlay"></div>
+          <div class="now-showing"><small id="pre-label">The house</small><span id="pre-note"></span></div>
+          <div class="btn-row pre-actions" id="pre-actions"></div>
         </div>
-        <p class="theater-no" id="theater-no">Theater #—</p>
-        <div class="countdown" id="countdown">--:--</div>
-        <div class="countdown-sub" id="countdown-sub">until showtime</div>
-        <div class="screen-arc">screen</div>
-        <div class="seatmap seatmap-stage" id="seatmap"></div>
-        <div class="mood" id="mood"></div>
-        <p class="lede center" id="pre-note"></p>
-        <div class="btn-row" id="pre-actions" style="justify-content:center"></div>
       </section>
 
       <!-- SCREENING -->
@@ -79,6 +75,14 @@
             <button class="btn small" type="submit">Send</button>
           </form>
         </div>
+      </section>
+
+      <section class="panel" id="chart-panel">
+        <h2>Seating chart</h2>
+        <div class="screen-arc">screen</div>
+        <div class="seatmap seatmap-stage" id="seatmap"></div>
+        <div class="mood" id="mood"></div>
+        <p class="lede tiny">The gold seat is yours. Tap it for your stubs.</p>
       </section>
 
       <section class="panel" id="house-panel" style="display:none">

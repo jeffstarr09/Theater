@@ -8,10 +8,11 @@
 <link rel="stylesheet" href="/static/css/street.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🎟️</text></svg>">
 </head>
-<body>
+<body class="first-person">
 
 <div class="street" id="street">
   <div class="stage" id="stage">
+    <i class="beams"></i>
     <i class="aurora"></i>
     <i class="aurora b"></i>
     <i class="dusk"></i>
@@ -25,28 +26,23 @@
     <div class="hot window l" id="window-l"></div>
     <div class="hot window r" id="window-r"></div>
 
-    <div class="hot board" id="board"></div>
+    <!-- the ticket window between the doors -->
+    <div class="hot booth" id="booth" title="Buy a seat">
+      <div class="b-sign">Box Office</div>
+      <div class="b-price" id="b-price">$1</div>
+      <div class="b-note" id="b-note">one seat, please</div>
+      <i class="b-grille"></i>
+      <div class="shutter">sold out</div>
+    </div>
 
     <div class="hot door l" id="door-l" title="The doors"><i class="glow"></i><div class="door-label" id="door-label">ticket holders only</div></div>
     <div class="hot door r" id="door-r" title="The doors"><i class="glow"></i></div>
 
     <a class="neon" href="/hall" title="The Hall of Fame">Hall of Fame</a>
     <a class="plaque" href="/submit" title="The full submission form">Submissions →</a>
-  </div>
+    <a class="stubs" href="/me" title="Your ticket stubs"><i></i>your stubs</a>
 
-  <div class="sidewalk" id="sidewalk">
-    <i class="puddle"></i>
-    <div class="kiosk" id="kiosk" title="Buy a seat">
-      <div class="roof"></div>
-      <div class="body">
-        <div class="k-sign">Box office</div>
-        <div class="k-window" id="k-price">$1</div>
-        <div class="k-note" id="k-note">one seat, please</div>
-        <div class="dial" id="dial" title="Vibes"><b>vibes</b><button data-v="0" title="house lights"></button><button data-v="1" title="trippy"></button><button data-v="2" title="cosmic"></button></div>
-        <div class="shutter">sold out</div>
-      </div>
-    </div>
-    <div class="you-are-here" id="street-note">you are standing on the sidewalk · tap yourself for your stubs</div>
+    <div class="switch" id="dial" title="Vibes"><b>vibes</b><button data-v="0" title="house lights"></button><button data-v="1" title="trippy"></button><button data-v="2" title="cosmic"></button></div>
   </div>
 </div>
 
@@ -62,7 +58,7 @@
       <p class="lede">Every film screens <b>once</b>. Everyone watches the same frame at the same second —
         no pause, no scrub, no replay, no catching up later.</p>
       <p class="lede">Drop a film into an empty frame in the window, or buy a seat at the box office. Either
-        way you walk in and sit down. When the house is ready the doors close and a public countdown starts.</p>
+        way, in you go. When the house is ready the doors close and a public countdown starts.</p>
       <p class="lede">Afterwards the audience votes Best Picture. The winner is kept forever in the Hall of Fame;
         every other print is struck and survives only as a statistic.</p>
       <p class="lede tiny">The House Manager sizes each theater to real demand — a quiet night gets a small
@@ -75,7 +71,6 @@
 
 <script src="/static/js/common.js"></script>
 <script src="/static/js/slate.js"></script>
-<script src="/static/js/avatar.js"></script>
 <script src="/static/js/street.js"></script>
 <script src="/static/js/dev.js"></script>
 </body>

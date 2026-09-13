@@ -11,8 +11,6 @@ mountChrome('street');
 
 const hall = new Hall('street');
 let S = null;
-let you = null;              // your avatar on the sidewalk
-let crowdSeed = null;
 let entering = false;
 const posterCache = new Map();
 
@@ -41,10 +39,8 @@ function render(s) {
   $('#sign-now').className = 'sign-now ' + cls;
   renderSignWhen(s);
   renderPosters(s);
-  renderBoard(s);
-  renderBoxOffice(s);
+  renderBooth(s);
   renderEntrance(s);
-  renderSidewalk(s);
   renderBill(s);
 }
 
@@ -129,39 +125,17 @@ function emptyFrame() {
   return frame;
 }
 
-/* ---------- the board between the doors ---------- */
-function renderBoard(s) {
-  const st = s.theater.state;
-  const b = $('#board');
-  if (st === 'DOORS_CLOSED') {
-    clearInterval(window._boardTimer);
-    const tick = () => {
-      const left = s.theater.showtimeAt - hall.now();
-      b.innerHTML = `Curtain in<b>${clockString(Math.max(0, left))}</b><small>theater #${s.theater.number}</small>`;
-    };
-    tick(); window._boardTimer = setInterval(tick, 500);
-    return;
-  }
-  clearInterval(window._boardTimer);
-  if (st === 'SHOWING') b.innerHTML = `Now<br>showing<small>join in progress</small>`;
-  else if (st === 'VOTING') b.innerHTML = `Ballot<br>open<small>best picture</small>`;
-  else if (st === 'RESULTS') b.innerHTML = `The<br>verdict<small>hall of fame</small>`;
-  else if (st === 'OPEN_CALL') b.innerHTML = `Open<br>call<small>bring a film</small>`;
-  else b.innerHTML = `Tonight<b>${s.slots.filled}/${s.slots.total}</b><small>films on the bill</small>`;
-}
-
-/* ---------- the box office kiosk ---------- */
-function renderBoxOffice(s) {
-  const bo = $('#kiosk');
+/* ---------- the ticket window between the doors ---------- */
+function renderBooth(s) {
+  const bo = $('#booth');
   const open = ['FILLING', 'OPEN_CALL'].includes(s.theater.state);
   const ticket = s.you.ticket;
-  $('#k-price').textContent = `$${(s.prices.audienceCents / 100).toFixed(2)}`;
+  $('#b-price').textContent = `$${(s.prices.audienceCents / 100).toFixed(2)}`;
   bo.classList.toggle('closed', !open);
-  $('#k-note').textContent = ticket ? 'you have a ticket' : open ? 'one seat, please' : 'window closed';
-  bo.onclick = (e) => {
-    if (e.target.closest('.dial')) return;            // the dial is not the window
+  $('#b-note').textContent = ticket ? 'you hold a ticket' : open ? 'one seat, please' : 'window closed';
+  bo.onclick = () => {
     if (!open) return toast('The window is shut for this one. The next house opens shortly.');
-    if (ticket) return toast('You are already holding a ticket. Walk in.');
+    if (ticket) return toast('You are already holding a ticket. Go on in.');
     checkout(s);
   };
 }
@@ -174,38 +148,12 @@ function renderEntrance(s) {
   for (const door of [$('#door-l'), $('#door-r')]) {
     door.classList.toggle('open', showing || !!ticket);
     door.classList.toggle('spill', showing);
-    door.onclick = () => enterTheater(ticket ? 'to your seat' : 'this way');
+    door.onclick = () => enterTheater(ticket ? 'to your seat' : 'this way', door);
   }
   $('#door-label').textContent = showing
     ? (ticket ? 'in progress — go in' : 'in progress — watch from the back')
     : ticket ? 'this way to your seat' : 'ticket holders only';
 }
-
-/* ---------- the sidewalk ---------- */
-function renderSidewalk(s) {
-  const walk = $('#sidewalk');
-  const seed = `street:${s.theater.number}`;
-  if (crowdSeed !== seed) {
-    crowdSeed = seed;
-    $$('.avatar', walk).forEach((a) => a.remove());
-    const width = walk.clientWidth || 900;
-    for (const node of Avatar.loiterers(seed, 6, { x0: width * 0.19, x1: width * 0.9 })) {
-      walk.appendChild(node);
-    }
-    you = null;
-  }
-  if (!you) {
-    you = Avatar.make(s.you.id || 'you', { you: true, label: 'you', scale: 0.78 });
-    you.style.left = `${(walk.clientWidth || 900) * 0.5 - 19}px`;
-    you.title = 'Your stubs';
-    you.onclick = () => { if (!entering) location.href = '/me'; };
-    walk.appendChild(you);
-  }
-  $('#street-note').textContent = s.you.ticket
-    ? 'ticket in hand — the doors are open to you'
-    : 'you are standing on the sidewalk · tap yourself for your stubs';
-}
-window.addEventListener('resize', () => { crowdSeed = null; if (S) renderSidewalk(S); });
 
 function renderBill(s) {
   const ul = $('#programme');
@@ -232,28 +180,27 @@ function renderBill(s) {
 /* =============================================================================
  * WALKING IN
  * ========================================================================== */
-async function enterTheater(word = 'this way') {
+async function enterTheater(word = 'this way', door = null) {
   if (entering) return;
   entering = true;
-  const walk = $('#sidewalk');
+  const stage = $('#stage');
   const doors = [$('#door-l'), $('#door-r')];
+  door = door || doors[0];
   doors.forEach((d) => d.classList.add('open'));
 
-  if (you) {
-    const wr = walk.getBoundingClientRect();
-    const from = { x: parseFloat(you.style.left) || 0 };
-    const mid = doors.map((d) => { const r = d.getBoundingClientRect(); return r.left - wr.left + r.width / 2 - 19; });
-    const to = { x: Math.abs(mid[0] - from.x) < Math.abs(mid[1] - from.x) ? mid[0] : mid[1] };
-    you.querySelector('.avatar-label')?.remove();
-    await Avatar.walk(you, from, to, { duration: Math.max(500, Math.abs(to.x - from.x) * 6) });
-    you.classList.add('walking');
-    you.style.transition = 'opacity .5s, transform .5s';
-    you.style.opacity = '0';
-    you.style.transform = 'translateY(-14px) scale(.9)';
-  }
+  // Push the camera through the chosen door. The stage scales up around the
+  // door's centre, the light in the doorway floods, then the wipe takes over.
+  const sr = stage.getBoundingClientRect(), dr = door.getBoundingClientRect();
+  const ox = ((dr.left + dr.width / 2 - sr.left) / sr.width) * 100;
+  const oy = ((dr.top + dr.height * 0.62 - sr.top) / sr.height) * 100;
+  stage.style.transformOrigin = `${ox}% ${oy}%`;
+  stage.classList.add('entering');
+  door.classList.add('through');
+  await new Promise((r) => setTimeout(r, 950));
   $('#wipe-word').textContent = word;
   $('#enter-wipe').classList.add('on');
-  setTimeout(() => { location.href = '/house?arrive=1'; }, 760);
+  await new Promise((r) => setTimeout(r, 650));
+  location.href = '/house?arrive=1';
 }
 
 /* =============================================================================
@@ -281,7 +228,7 @@ function checkout(s) {
     try {
       await api('/api/tickets/audience', { method: 'POST', body: { card: $('#card', m).value } });
       bg.remove();
-      enterTheater('enjoy the show');
+      enterTheater('enjoy the show', $('#door-r'));
     } catch (e) {
       toast(e.message, true);
       $('#pay', m).disabled = false;
@@ -383,7 +330,7 @@ function upload(file, meta, frame) {
     if (xhr.status >= 200 && xhr.status < 300) {
       $('#window-r').dataset.sig = '';
       toast('In the frame. The desk will look at it — your seat is held.');
-      enterTheater('take your seat');
+      enterTheater('take your seat', $('#door-l'));
     } else {
       toast(data.error || 'The projectionist dropped it.', true);
       $('#window-r').dataset.sig = '';
@@ -405,7 +352,7 @@ document.addEventListener('drop', (e) => {
   }
 });
 
-/* ---------- the vibes dial on the kiosk ---------- */
+/* ---------- the vibes switch on the wall ---------- */
 function renderDial() {
   const v = getVibe();
   $$('#dial button').forEach((b) => b.classList.toggle('on', Number(b.dataset.v) === v));

@@ -56,18 +56,6 @@
 .sign-when { margin-top: 3px; font-size: clamp(7px, .95vw, 11px); letter-spacing: .22em; text-transform: uppercase; color: #b08c62; }
 .sign-clock { font-family: var(--mono); color: #ffe9c0; }
 
-/* ---------- the board between the doors ---------- */
-.board {
-  left: 43.9%; top: 65.6%; width: 12.2%; height: 15.6%;
-  background: #1a1220; border: 2px solid #6a4d3a; border-radius: 3px;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
-  color: #ffe9c0; font-family: var(--serif); letter-spacing: .12em; text-transform: uppercase;
-  font-size: clamp(7px, 1vw, 12px); line-height: 1.35; padding: 4px;
-  box-shadow: inset 0 0 20px rgba(0,0,0,.7), 0 0 20px rgba(255,214,140,.15);
-}
-.board b { font-family: var(--mono); font-size: clamp(9px, 1.5vw, 18px); color: #fff; letter-spacing: .06em; }
-.board small { color: #b08c62; font-family: var(--mono); font-size: clamp(6px, .8vw, 9px); letter-spacing: .18em; }
-
 /* ---------- windows: the poster frames ---------- */
 .window {
   top: 63.2%; height: 28.6%; display: flex; gap: 5%; padding: 2% 4%;
@@ -129,99 +117,6 @@
   background: radial-gradient(50% 100% at 50% 0%, rgba(255,214,140,.5), transparent 70%);
 }
 
-/* ---------- sidewalk & the box office kiosk ---------- */
-.sidewalk {
-  position: relative; height: 118px;
-  background: linear-gradient(180deg, #3a2f4a 0 6px, #2b2238 6px 100%);
-  border-top: 2px solid #5a4a6e;
-}
-.sidewalk::before {          /* pavement joints */
-  content: ""; position: absolute; left: 0; right: 0; top: 46px; height: 1px;
-  background: repeating-linear-gradient(90deg, #3d3150 0 46px, transparent 46px 52px);
-}
-.sidewalk::after {           /* the curb */
-  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 18px;
-  background: linear-gradient(180deg, #4a3d5f, #3a2f4a 30%, #241c30 31%);
-}
-.you-are-here {
-  position: absolute; right: 14px; bottom: 22px; font-family: var(--mono); font-size: 9px;
-  letter-spacing: .22em; text-transform: uppercase; color: #8d7a9a; text-shadow: 0 1px 2px #000;
-}
-.kiosk {
-  position: absolute; left: 3.2%; bottom: 16px; width: 12%; min-width: 96px; z-index: 4; cursor: pointer;
-  transition: transform .18s, filter .18s;
-}
-.kiosk:hover { transform: translateY(-2px); filter: brightness(1.12); }
-.kiosk .roof { height: 12px; background: #d96d57; border-radius: 4px 4px 0 0; border-bottom: 3px solid #8f3f34; }
-.kiosk .body {
-  background: linear-gradient(180deg, #34253f, #2a1c33); border: 2px solid #4a3457; border-top: 0;
-  padding: 6px 7px 8px; text-align: center; position: relative;
-}
-.kiosk .k-sign { font-family: var(--mono); font-size: 7.5px; letter-spacing: .24em; color: #ffd479; text-transform: uppercase; }
-.kiosk .k-window {
-  margin: 5px auto; height: 34px; border-radius: 3px; position: relative;
-  background: radial-gradient(90% 110% at 50% 20%, #ffe6b8, #c99a55 70%);
-  box-shadow: inset 0 0 12px rgba(0,0,0,.4), 0 0 20px rgba(255,214,140,.45);
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--serif); font-size: 15px; color: #3a2410;
-}
-.kiosk .k-note { font-size: 7.5px; letter-spacing: .14em; text-transform: uppercase; color: #b08c62; }
-.kiosk .shutter {
-  position: absolute; inset: 0; background: repeating-linear-gradient(180deg, #241820 0 4px, #1b1018 4px 8px);
-  display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 8px;
-  letter-spacing: .24em; color: #7d6672; text-transform: uppercase; transform-origin: top; transform: scaleY(0);
-  transition: transform .5s cubic-bezier(.5,0,.3,1);
-}
-.kiosk.closed .shutter { transform: scaleY(1); }
-.kiosk.closed { cursor: default; }
-
-/* ---------- sprites ---------- */
-.avatar {
-  position: absolute; bottom: 20px; z-index: 5;
-  width: calc(49px * var(--scale, 1)); height: calc(100px * var(--scale, 1));
-  transform-origin: bottom center;
-}
-.avatar .sprite {
-  position: absolute; inset: 0;
-  background: url("/static/art/walk_sheet.png") no-repeat;
-  background-size: calc(343px * var(--scale, 1)) calc(600px * var(--scale, 1));
-  background-position: calc(-147px * var(--scale, 1)) calc(var(--row, 0) * -100px * var(--scale, 1));
-  image-rendering: auto;
-}
-.avatar.facing-right .sprite { scale: -1 1; }
-.avatar.walking .sprite { animation: gait .62s steps(7) infinite; }
-@keyframes gait {
-  from { background-position-x: 0 }
-  to   { background-position-x: calc(-343px * var(--scale, 1)) }
-}
-.avatar::after {             /* contact shadow */
-  content: ""; position: absolute; left: 10%; bottom: -3px; width: 80%; height: 7px; border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(0,0,0,.6), transparent);
-}
-.avatar.you { filter: drop-shadow(0 0 6px rgba(232,192,125,.9)); }
-.avatar.you .halo {
-  position: absolute; left: -40%; right: -40%; bottom: -6px; height: 16px; border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(232,192,125,.65), transparent);
-}
-.avatar-label {
-  position: absolute; bottom: 102%; left: 50%; transform: translateX(-50%); white-space: nowrap;
-  font-family: var(--mono); font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase;
-  color: var(--gold); text-shadow: 0 2px 8px #000; font-weight: 400;
-}
-.avatar.loiterer { animation: drift var(--dur, 9s) ease-in-out var(--delay, 0s) infinite alternate; }
-@keyframes drift { from { transform: translateX(0) } to { transform: translateX(var(--drift, 14px)) } }
-
-/* ---------- entering ---------- */
-#enter-wipe {
-  position: fixed; inset: 0; z-index: 90; pointer-events: none; opacity: 0; transition: opacity .75s ease;
-  background: radial-gradient(60% 60% at 50% 60%, rgba(255,206,133,.96), #140a10 72%);
-}
-#enter-wipe.on { opacity: 1; }
-#enter-wipe b {
-  position: absolute; left: 0; right: 0; top: 54%; text-align: center; font-family: var(--serif);
-  font-size: 22px; letter-spacing: .3em; text-transform: uppercase; color: #2a1208; font-weight: 400;
-}
-
 /* ---------- seated crowd (auditorium seat map) ---------- */
 .sitter {
   position: absolute; left: 50%; bottom: 58%; transform: translateX(-50%);
@@ -265,99 +160,6 @@
 .grid.showing { grid-template-columns: 1fr; }
 
 /* =============================================================================
- * PSYCHEDELIC SPIN — outside
- * ========================================================================== */
-/* the sky over the building runs an aurora, blended into the painting */
-.stage .dusk {
-  background:
-    linear-gradient(180deg, rgba(8,4,14,.5) 0%, rgba(8,4,14,.12) 35%, transparent 60%);
-}
-.stage .aurora {
-  position: absolute; inset: 0; pointer-events: none; mix-blend-mode: color;
-  opacity: calc(.85 * var(--trip));
-  background: linear-gradient(115deg, #ff2fa0, #7b2fff 22%, #2fd6ff 45%, #2fff9a 62%, #ffe02f 80%, #ff2fa0);
-  background-size: 300% 300%;
-  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 34%, transparent 58%);
-          mask-image: linear-gradient(180deg, #000 0%, #000 34%, transparent 58%);
-  animation: aurora calc(22s / var(--trip)) ease-in-out infinite alternate;
-}
-.stage .aurora.b {
-  mix-blend-mode: screen; opacity: calc(.28 * var(--trip));
-  background: linear-gradient(65deg, transparent 20%, rgba(255,111,183,.9) 40%, transparent 50%, rgba(127,212,255,.9) 65%, transparent 80%);
-  background-size: 250% 250%;
-  filter: blur(18px);
-  animation: aurora calc(14s / var(--trip)) linear infinite alternate-reverse;
-}
-@keyframes aurora { from { background-position: 0% 50%; } to { background-position: 100% 50%; } }
-
-/* the marquee: bulbs chase through the spectrum, the name splits into cyan/magenta */
-.sign::before { animation: bulbs 3.2s ease-in-out infinite, spectrum calc(9s / var(--trip)) linear infinite; }
-@keyframes spectrum { from { filter: drop-shadow(0 0 5px rgba(255,214,140,.9)) hue-rotate(0deg) } to { filter: drop-shadow(0 0 5px rgba(255,214,140,.9)) hue-rotate(360deg) } }
-.sign-name {
-  animation: aberrate calc(6s / var(--trip)) ease-in-out infinite alternate;
-}
-@keyframes aberrate {
-  from { text-shadow: 0 0 22px rgba(255,214,140,.6), -2px 0 rgba(255,47,160,calc(.7 * var(--trip))), 2px 0 rgba(47,214,255,calc(.7 * var(--trip))); }
-  to   { text-shadow: 0 0 22px rgba(255,214,140,.6), 2px 1px rgba(255,47,160,calc(.7 * var(--trip))), -2px -1px rgba(47,214,255,calc(.7 * var(--trip))); }
-}
-.sign-now { animation: neon-hum 4s ease-in-out infinite alternate; }
-@keyframes neon-hum { from { filter: brightness(1) } to { filter: brightness(1.35) } }
-
-/* the door light and the pavement breathe colour */
-.door.open .glow, .door:hover .glow { animation: glowcycle calc(8s / var(--trip)) linear infinite; }
-@keyframes glowcycle { from { filter: hue-rotate(0deg) } to { filter: hue-rotate(360deg) } }
-.sidewalk .puddle {              /* wet-pavement reflections of the marquee */
-  position: absolute; inset: 0; pointer-events: none; opacity: calc(.55 * var(--trip)); mix-blend-mode: screen;
-  background:
-    radial-gradient(45% 60% at 50% 0%, rgba(255,214,140,.35), transparent 70%),
-    linear-gradient(90deg, transparent, rgba(255,47,160,.28) 20%, rgba(123,47,255,.28) 40%, rgba(47,214,255,.28) 60%, rgba(47,255,154,.24) 80%, transparent);
-  background-size: 100% 100%, 300% 100%;
-  animation: aurora calc(16s / var(--trip)) linear infinite alternate;
-  -webkit-mask-image: repeating-linear-gradient(180deg, #000 0 2px, transparent 2px 5px);
-          mask-image: repeating-linear-gradient(180deg, #000 0 2px, transparent 2px 5px);
-}
-
-/* the neon HALL OF FAME sign on the building's flank */
-.neon {
-  position: absolute; left: 92.4%; top: 31%; width: 5.2%; height: 26%; z-index: 4;
-  display: flex; align-items: center; justify-content: center; text-decoration: none;
-  writing-mode: vertical-rl; text-orientation: mixed;
-  font-family: var(--mono); font-size: clamp(7px, 1.05vw, 13px); letter-spacing: .34em; text-transform: uppercase;
-  color: #fff; border: 2px solid rgba(255,111,183,.8); border-radius: 6px; background: rgba(20,8,20,.55);
-  text-shadow: 0 0 6px #ff6fb7, 0 0 14px #ff2fa0, 0 0 28px rgba(255,47,160,.8);
-  box-shadow: 0 0 12px rgba(255,47,160,.6), inset 0 0 12px rgba(255,47,160,.4);
-  animation: neon-flicker 9s infinite; transition: transform .2s;
-}
-.neon:hover { transform: scale(1.05); color: #fff; box-shadow: 0 0 26px rgba(255,47,160,.9), inset 0 0 14px rgba(255,47,160,.6); }
-@keyframes neon-flicker { 0%,87%,100% { opacity: 1 } 88% { opacity: .55 } 90% { opacity: 1 } 93% { opacity: .7 } 95% { opacity: 1 } }
-
-/* the little brass plaque under the board */
-.plaque {
-  position: absolute; left: 44.6%; top: 82.4%; width: 10.8%; height: 3.6%; z-index: 4; text-decoration: none;
-  display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(180deg, #d8b46a, #9a7a3c); color: #2a1c0c; border-radius: 2px;
-  font-family: var(--mono); font-size: clamp(5px, .62vw, 8px); letter-spacing: .22em; text-transform: uppercase;
-  box-shadow: 0 1px 0 rgba(255,255,255,.35) inset, 0 3px 8px rgba(0,0,0,.6);
-}
-.plaque:hover { filter: brightness(1.15); }
-
-/* you are clickable: that is where your stubs live */
-.avatar.you { cursor: pointer; }
-.avatar.you:hover .avatar-label { color: #fff; }
-.avatar.you .halo { animation: glowcycle calc(6s / var(--trip)) linear infinite; }
-
-/* the VIBES dial on the kiosk */
-.dial { margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 5px; }
-.dial b { font-family: var(--mono); font-size: 6.5px; letter-spacing: .2em; color: #b08c62; font-weight: 400; text-transform: uppercase; }
-.dial button {
-  width: 9px; height: 9px; border-radius: 50%; border: 1px solid #6a4d3a; background: #2a1c33; padding: 0; cursor: pointer;
-  transition: .15s;
-}
-.dial button.on { background: #ff6fb7; border-color: #fff; box-shadow: 0 0 8px #ff2fa0; }
-.dial button:nth-child(3).on { background: #ffd479; box-shadow: 0 0 8px #ffd479; }
-.dial button:nth-child(4).on { background: #7fd4ff; box-shadow: 0 0 10px #2fd6ff; }
-
-/* =============================================================================
  * PSYCHEDELIC SPIN — inside
  * ========================================================================== */
 .house-plate .trip {               /* between the painting and the picture, never over the film */
@@ -374,4 +176,160 @@
 .seat.you { box-shadow: 0 0 14px #ffd479, 0 0 26px rgba(255,111,183,.8); cursor: pointer; }
 
 /* house lights: nearly everything off */
-:root[data-vibe="calm"] .stage .aurora.b, :root[data-vibe="calm"] .sidewalk .puddle { display: none; }
+:root[data-vibe="calm"] .stage .aurora.b, :root[data-vibe="calm"] .stage .beams { display: none; }
+
+/* =============================================================================
+ * FIRST PERSON
+ * You are standing in front of the building. There is no figure of you and
+ * no pavement — the picture is what you see. Pay, or hang a poster, and the
+ * camera pushes through the door.
+ * ========================================================================== */
+.street { border-radius: 12px; }
+.stage {
+  transition: transform 1.15s cubic-bezier(.55, 0, .85, .3), filter 1.15s ease-in;
+  will-change: transform;
+}
+.stage.entering { transform: scale(4.2); filter: brightness(1.9) saturate(1.3); }
+.door.through .glow { opacity: 1; transition: opacity .4s; background: radial-gradient(70% 90% at 50% 100%, #fff6dc, rgba(255,214,140,.9) 40%, rgba(255,160,80,.5) 70%, transparent 90%); }
+#enter-wipe { background: radial-gradient(60% 60% at 50% 55%, #fff8e6, #ffd479 35%, #7b2fff 75%, #140a10 100%); }
+#enter-wipe b { color: #2a1208; }
+
+/* ---------- the ticket window between the doors ---------- */
+.booth {
+  left: 43.9%; top: 65.6%; width: 12.2%; height: 15.6%; cursor: pointer; overflow: hidden;
+  background: linear-gradient(180deg, #1a1220, #120b16); border: 2px solid #6a4d3a; border-radius: 3px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+  box-shadow: inset 0 0 20px rgba(0,0,0,.7), 0 0 26px rgba(255,214,140,.25); transition: box-shadow .2s, filter .2s;
+}
+.booth:hover { filter: brightness(1.15); box-shadow: inset 0 0 20px rgba(0,0,0,.7), 0 0 40px rgba(255,214,140,.5); }
+.booth .b-sign { font-family: var(--mono); font-size: clamp(6px, .8vw, 9px); letter-spacing: .3em; color: #ffd479; text-transform: uppercase; }
+.booth .b-price {
+  margin: 3% 0; width: 78%; padding: 4% 0; border-radius: 3px; font-family: var(--serif); font-size: clamp(11px, 1.9vw, 24px); color: #3a2410;
+  background: radial-gradient(90% 120% at 50% 20%, #ffe6b8, #c99a55 75%); box-shadow: inset 0 0 12px rgba(0,0,0,.35), 0 0 18px rgba(255,214,140,.45);
+}
+.booth .b-note { font-size: clamp(5px, .62vw, 8px); letter-spacing: .16em; text-transform: uppercase; color: #b08c62; }
+.booth .b-grille { position: absolute; bottom: 5%; left: 50%; transform: translateX(-50%); width: 26%; height: 5%; border-radius: 9px;
+  background: repeating-linear-gradient(90deg, #5a3d1c 0 2px, transparent 2px 5px); }
+.booth .shutter {
+  position: absolute; inset: 0; background: repeating-linear-gradient(180deg, #241820 0 5px, #1b1018 5px 10px);
+  display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: clamp(6px, .8vw, 10px);
+  letter-spacing: .24em; color: #7d6672; text-transform: uppercase; transform-origin: top; transform: scaleY(0);
+  transition: transform .5s cubic-bezier(.5,0,.3,1);
+}
+.booth.closed .shutter { transform: scaleY(1); }
+.booth.closed { cursor: default; }
+
+/* ---------- your stubs: a ticket tucked into the marquee's corner ---------- */
+.stubs {
+  position: absolute; left: 3%; top: 63%; width: 5.4%; height: 5.2%; z-index: 4; text-decoration: none;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  background: linear-gradient(180deg, #ffd479, #c99a55); color: #3a2410; border-radius: 3px;
+  font-family: var(--mono); font-size: clamp(5px, .6vw, 8px); letter-spacing: .14em; text-transform: uppercase;
+  box-shadow: 0 3px 8px rgba(0,0,0,.6); transform: rotate(-4deg);
+  -webkit-mask: radial-gradient(circle at 0 50%, transparent 3px, #000 3.5px), radial-gradient(circle at 100% 50%, transparent 3px, #000 3.5px);
+  -webkit-mask-composite: source-in; mask-composite: intersect;
+}
+.stubs:hover { filter: brightness(1.12); transform: rotate(-2deg) scale(1.05); }
+.stubs i { width: 4px; height: 60%; border-left: 1px dashed #3a2410; }
+
+/* ---------- the vibes switch plate on the wall ---------- */
+.switch {
+  position: absolute; left: 2.2%; top: 88%; z-index: 4; display: flex; align-items: center; gap: 6px;
+  padding: 4px 7px; border-radius: 4px; background: #1a1220; border: 1px solid #4a3457;
+}
+.switch b { font-family: var(--mono); font-size: 7px; letter-spacing: .2em; color: #b08c62; font-weight: 400; text-transform: uppercase; }
+.switch button { width: 10px; height: 10px; border-radius: 50%; border: 1px solid #6a4d3a; background: #2a1c33; padding: 0; cursor: pointer; transition: .15s; }
+.switch button.on { background: #ff6fb7; border-color: #fff; box-shadow: 0 0 8px #ff2fa0; }
+.switch button:nth-child(3).on { background: #ffd479; box-shadow: 0 0 8px #ffd479; }
+.switch button:nth-child(4).on { background: #7fd4ff; box-shadow: 0 0 10px #2fd6ff; }
+
+/* =============================================================================
+ * PSYCHEDELIC SPIN — outside, and this time you will notice
+ * ========================================================================== */
+/* searchlights sweeping from behind the building */
+.stage .beams {
+  position: absolute; inset: -40% -20%; pointer-events: none; mix-blend-mode: screen;
+  opacity: calc(.75 * var(--trip));
+  background:
+    conic-gradient(from 200deg at 50% 60%, transparent 0 8%, rgba(255,47,160,.55) 10%, transparent 13%, transparent 30%, rgba(47,214,255,.5) 33%, transparent 36%, transparent 60%, rgba(255,224,47,.45) 63%, transparent 66%, transparent 100%);
+  filter: blur(14px);
+  animation: sweep calc(18s / var(--trip)) linear infinite;
+}
+@keyframes sweep { to { transform: rotate(360deg); } }
+
+/* coloured light washing over the whole front, like gels on a follow spot */
+.stage .aurora {
+  position: absolute; inset: 0; pointer-events: none; mix-blend-mode: hard-light;
+  opacity: calc(.55 * var(--trip));
+  background: linear-gradient(115deg, #ff2fa0, #7b2fff 22%, #2fd6ff 45%, #2fff9a 62%, #ffe02f 80%, #ff2fa0);
+  background-size: 300% 300%;
+  animation: aurora calc(14s / var(--trip)) ease-in-out infinite alternate;
+}
+.stage .aurora.b {
+  mix-blend-mode: screen; opacity: calc(.5 * var(--trip));
+  background:
+    radial-gradient(40% 50% at 20% 30%, rgba(255,47,160,.7), transparent 70%),
+    radial-gradient(35% 45% at 80% 25%, rgba(47,214,255,.7), transparent 70%),
+    radial-gradient(45% 40% at 55% 75%, rgba(123,47,255,.6), transparent 70%);
+  background-size: 200% 200%;
+  filter: blur(22px);
+  animation: aurora calc(9s / var(--trip)) ease-in-out infinite alternate-reverse;
+}
+@keyframes aurora { from { background-position: 0% 50%; } to { background-position: 100% 50%; } }
+/* the whole picture breathes through the spectrum */
+.stage:not(.entering) { animation: breathe calc(16s / var(--trip)) ease-in-out infinite alternate; }
+@keyframes breathe {
+  from { filter: hue-rotate(calc(-28deg * var(--trip))) saturate(1.15); }
+  to   { filter: hue-rotate(calc(28deg * var(--trip))) saturate(1.35); }
+}
+:root[data-vibe="cosmic"] .stage:not(.entering) { animation: spin-hue 12s linear infinite; }
+@keyframes spin-hue { from { filter: hue-rotate(0deg) saturate(1.5); } to { filter: hue-rotate(360deg) saturate(1.5); } }
+:root[data-vibe="calm"] .stage:not(.entering) { animation: none; }
+
+/* the marquee: bulbs chase the spectrum, the name runs a moving gradient with split ghosts */
+.sign::before { animation: bulbs 3.2s ease-in-out infinite, spectrum calc(6s / var(--trip)) linear infinite; }
+@keyframes spectrum { from { filter: drop-shadow(0 0 6px rgba(255,214,140,.9)) hue-rotate(0deg) } to { filter: drop-shadow(0 0 6px rgba(255,214,140,.9)) hue-rotate(360deg) } }
+.sign-name {
+  background: linear-gradient(90deg, #ffe9c0, #ff6fb7, #7fd4ff, #ffe02f, #ffe9c0); background-size: 300% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(-2px 0 rgba(255,47,160,.8)) drop-shadow(2px 0 rgba(47,214,255,.8)) drop-shadow(0 0 14px rgba(255,214,140,.6));
+  animation: aurora calc(7s / var(--trip)) linear infinite alternate;
+}
+.sign-now { animation: neon-hum 3s ease-in-out infinite alternate; }
+@keyframes neon-hum { from { filter: brightness(1) } to { filter: brightness(1.5) } }
+
+/* windows pulse, the door light and the neon cycle */
+.window .poster-frame { box-shadow: 0 6px 16px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,226,170,.3), 0 0 calc(18px * var(--trip)) rgba(255,111,183,calc(.6 * var(--trip))); }
+.door.open .glow, .door:hover .glow { animation: glowcycle calc(5s / var(--trip)) linear infinite; }
+@keyframes glowcycle { from { filter: hue-rotate(0deg) } to { filter: hue-rotate(360deg) } }
+.neon {
+  position: absolute; left: 92.4%; top: 31%; width: 5.2%; height: 26%; z-index: 4;
+  display: flex; align-items: center; justify-content: center; text-decoration: none;
+  writing-mode: vertical-rl; text-orientation: mixed;
+  font-family: var(--mono); font-size: clamp(7px, 1.05vw, 13px); letter-spacing: .34em; text-transform: uppercase;
+  color: #fff; border: 2px solid rgba(255,111,183,.8); border-radius: 6px; background: rgba(20,8,20,.55);
+  text-shadow: 0 0 6px #ff6fb7, 0 0 14px #ff2fa0, 0 0 28px rgba(255,47,160,.8);
+  box-shadow: 0 0 12px rgba(255,47,160,.6), inset 0 0 12px rgba(255,47,160,.4);
+  animation: neon-flicker 9s infinite, glowcycle calc(10s / var(--trip)) linear infinite; transition: transform .2s;
+}
+.neon:hover { transform: scale(1.05); color: #fff; }
+@keyframes neon-flicker { 0%,87%,100% { opacity: 1 } 88% { opacity: .55 } 90% { opacity: 1 } 93% { opacity: .7 } 95% { opacity: 1 } }
+.plaque {
+  position: absolute; left: 44.6%; top: 82.4%; width: 10.8%; height: 3.6%; z-index: 4; text-decoration: none;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(180deg, #d8b46a, #9a7a3c); color: #2a1c0c; border-radius: 2px;
+  font-family: var(--mono); font-size: clamp(5px, .62vw, 8px); letter-spacing: .22em; text-transform: uppercase;
+  box-shadow: 0 1px 0 rgba(255,255,255,.35) inset, 0 3px 8px rgba(0,0,0,.6);
+}
+.plaque:hover { filter: brightness(1.15); }
+
+/* ---------- arriving: the camera settles into your seat ---------- */
+.house-plate.arriving { animation: settle 1.7s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes settle {
+  from { transform: scale(1.6) translateY(-8%); filter: brightness(5) saturate(0); }
+  35%  { filter: brightness(1.6) saturate(.8); }
+  to   { transform: none; filter: none; }
+}
+.house-plate .pre-actions { position: absolute; right: 14px; bottom: 14px; z-index: 6; margin: 0; }
+.grid.pre { grid-template-columns: 1.75fr .8fr; }
+@media (max-width: 900px) { .grid.pre { grid-template-columns: 1fr; } }

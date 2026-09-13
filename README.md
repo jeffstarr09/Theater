@@ -28,9 +28,10 @@ house already filling, a crowd, and a film waiting at the moderation desk.
 
 ## Standing outside
 
-The front page is not a dashboard, it is a place. You are a small walking figure on a sidewalk in
+The front page is not a dashboard, it is a place, and it is first person: you are standing in
 front of a painted cinema at dusk — a lit marquee, two shop windows with poster frames in them, a
-box office kiosk and a pair of doors with light behind them.
+ticket window between the doors, and the doors themselves with light behind them. There is no
+figure of you and no pavement; the picture is what you see.
 
 There are exactly two ways in, and both of them walk you through those doors:
 
@@ -40,9 +41,10 @@ There are exactly two ways in, and both of them walk you through those doors:
   that moment.
 - **Buy a seat at the window.** Click the box office, pay the stub $1, done.
 
-Either way your figure walks to the nearer door, the doorway lights up, and you come back up inside
-the auditorium — where you walk down the aisle and sit in the chair the box office gave you. The
-gold head in the crowd is you.
+Either way the camera pushes through the door — the whole front swells around the doorway, the
+light in it floods, the wipe takes over — and you come up inside the auditorium, the view settling
+into your seat, facing the screen. Before the show the screen shows the house slate and the
+countdown to curtain; the seating chart (your seat in gold) sits beside you in the sidebar.
 
 The building is the status display, so there is nothing else to read: the marquee says what is
 happening, the board between the doors counts down to curtain, the frames in the windows are the
@@ -56,20 +58,22 @@ There is no navigation bar — it made the place feel like a website. Everything
 
 | To get to… | Do this |
 |---|---|
-| the auditorium | walk through the doors (buy a seat or hang a poster, or click the doors) |
-| the full submission form | the brass **SUBMISSIONS →** plaque under the board |
+| the auditorium | through the doors (buy a seat at the ticket window, hang a poster, or click the doors) |
+| the full submission form | the brass **SUBMISSIONS →** plaque under the ticket window |
 | the Hall of Fame | the pink neon **HALL OF FAME** sign on the building's flank |
-| your ticket stubs | tap your own figure on the pavement, or your gold seat inside |
+| your ticket stubs | the ticket tucked under the marquee at the left, or your gold seat on the chart |
 | back outside | the lit green **EXIT** sign, top-left, on every page that isn't the street |
 
 ### Vibes
 
-The psychedelia has a dial — three dots on the box office kiosk: *house lights*, *trippy*
-(default) and *cosmic*. It drives one CSS variable, `--trip`, which scales every effect: the aurora
-blended into the sky over the building, the bulbs chasing through the spectrum, the split-colour
-marquee lettering, the door light and the wet-pavement reflections cycling hue, the nebulae behind
-the page, and inside, the hue-drift on the curtains and the prismatic projector beam. The picture
-itself is never touched — the drift layer sits beneath it. The setting is remembered per browser.
+The psychedelia has a switch plate on the wall, bottom-left of the building: *house lights*,
+*trippy* (default) and *cosmic*. It drives one CSS variable, `--trip`, which scales every effect:
+coloured gels washing over the whole front, searchlights sweeping from behind the building, the
+picture breathing through the spectrum (a full hue spin on *cosmic*), bulbs chasing colour round
+the marquee, a moving gradient with split ghosts in the lettering, the door light and the neon
+cycling, nebulae behind the page, and inside, the hue-drift on the curtains and the prismatic
+projector beam. The film itself is never touched — the drift layer sits beneath the picture. The
+setting is remembered per browser.
 
 ## The art
 
@@ -81,7 +85,7 @@ and reworked in Pillow/NumPy — nothing was hand-drawn and no generative model 
 |---|---|---|
 | `public/art/facade.jpg` | Adobe Stock #426627839, *Cinema building vector illustration on background of city at night* | rendered from the .ai, right half mirrored from the left to remove the parked cars, cropped to the theater block, night-graded (windows kept lit) |
 | `public/art/auditorium.jpg` | Adobe Stock #304236895, *Audience sitting in a vintage cinema theatre* | rendered from the .ai, blue room re-hued to the house purple |
-| `public/art/walk_sheet.png` | Adobe Stock #1323562015, *walking step cycle sequence* | seven frames cut out, shirt recoloured into six coats, packed as a sprite sheet |
+| `public/art/walk_sheet.png` | Adobe Stock #1323562015, *walking step cycle sequence* | seven frames cut out and recoloured into a sprite sheet (from the earlier third-person version; kept for the seating-chart palette, not shown on screen) |
 
 The interactive hotspots (`public/css/street.css`) are percentages measured off the plate, so the
 clickable doors, windows and board stay glued to the painting at any width. A Canva-generated
@@ -173,7 +177,7 @@ server/
 public/
   street.html      ← out front: marquee, poster frames, box office, doors
   house.html       ← the auditorium: countdown, screening, ballot, verdict
-  js/avatar.js     ← the sprite figures, and the walk to your seat
+  js/avatar.js     ← seated-crowd figures for the seating chart
   js/slate.js      ← procedural films, title cards and poster art
   art/             ← the licensed scene plates and sprite sheet
   …                ← submit, hall of fame, profile, moderation desk
