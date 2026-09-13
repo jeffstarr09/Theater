@@ -19,12 +19,33 @@ house already filling, a crowd, and a film waiting at the moderation desk.
 
 | | |
 |---|---|
-| Lobby | <http://localhost:3000/> |
+| Out front | <http://localhost:3000/> |
 | Auditorium | <http://localhost:3000/house> |
 | Submit a film | <http://localhost:3000/submit> |
 | Hall of Fame | <http://localhost:3000/hall> |
 | Your stubs | <http://localhost:3000/me> |
 | Moderation desk | <http://localhost:3000/admin> — key `popcorn` |
+
+## Standing outside
+
+The front page is not a dashboard, it is a place. You are a small figure on a sidewalk looking at
+a lit marquee, a row of poster frames, a box office window and a pair of doors.
+
+There are exactly two ways in, and both of them walk you through those doors:
+
+- **Drop a film into an empty poster frame.** Drag a video anywhere onto the facade, or click an
+  empty frame. It is checked in the browser (mp4/webm, 15–60s, ≤50MB), you name it, and it goes up
+  in the frame as a poster while the moderation desk looks at it. Your filmmaker seat is held from
+  that moment.
+- **Buy a seat at the window.** Click the box office, pay the stub $1, done.
+
+Either way your figure walks to the doors, they swing open, and you come back up inside the
+auditorium — where you walk down the aisle and sit in the chair the box office gave you. The gold
+head in the crowd is you.
+
+The facade is the status display, so there is nothing else to read: the marquee says what is
+happening and counts down to curtain, the poster frames are the programme, the shutter comes down
+over the window when the doors close, and light spills onto the pavement while a film is running.
 
 ## Demo the whole loop in two minutes
 
@@ -75,9 +96,11 @@ you can bend. Nothing else in the codebase carries a pacing constant.
 ## Fake fullness
 
 The seat map is theatre in itself. Real attendees are seated among ambient extras using the curve
-in `policy.js` (`fullness`) — five real people read as a mostly-full house. The payload sent to
-browsers is a grid of occupied/empty plus *your own* seat, which is drawn in gold; nothing in the
-API distinguishes a real patron from an extra, and no raw attendance count is ever exposed.
+in `policy.js` (`fullness`) — five real people read as a mostly-full house. Every occupied seat
+grows the back of somebody's head, drawn identically whether that somebody is real or not; the
+only head you can pick out is your own, which is gold. The payload sent to browsers is a grid of
+occupied/empty plus your own seat index, so nothing in the API distinguishes a real patron from an
+extra and no raw attendance count is ever exposed.
 
 ## How the sync works
 
@@ -106,7 +129,12 @@ server/
   realtime.js      ← websockets: clock, chat, reactions, ballot
   routes.js        ← REST, uploads, moderation, DEV panel
   seed.js          ← demo data
-public/            ← lobby, auditorium, submit, hall, profile, admin
+public/
+  street.html      ← out front: marquee, poster frames, box office, doors
+  house.html       ← the auditorium: countdown, screening, ballot, verdict
+  js/avatar.js     ← the little figures, and the walk to your seat
+  js/slate.js      ← procedural films, title cards and poster art
+  …                ← submit, hall of fame, profile, moderation desk
 assets/demo/       ← three short clips used to seed real video
 ```
 

@@ -142,10 +142,10 @@ nav.top-nav a.on { color: var(--gold); border-color: var(--gold-dim); }
   display: flex; align-items: flex-start; justify-content: center;
   font-size: 10px; letter-spacing: .4em; color: var(--gold-dim); padding-top: 5px; text-transform: uppercase;
 }
-.seatmap { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 4px 0 2px; }
-.seat-row { display: flex; gap: 5px; justify-content: center; }
+.seatmap { display: flex; flex-direction: column; align-items: center; gap: 11px; padding: 12px 0 4px; }
+.seat-row { display: flex; gap: 6px; justify-content: center; }
 .seat {
-  width: 15px; height: 12px; border-radius: 4px 4px 2px 2px;
+  width: 16px; height: 13px; border-radius: 4px 4px 2px 2px;
   background: #221620; border: 1px solid #31212a; transition: .3s;
 }
 .seat.taken { background: var(--velvet); border-color: #7d1420; box-shadow: 0 0 5px rgba(193,18,31,.3); }

@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Theater</title>
+<link rel="stylesheet" href="/static/css/theater.css">
+<link rel="stylesheet" href="/static/css/street.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🎟️</text></svg>">
+</head>
+<body>
+
+<div class="street" id="street">
+  <i class="sky"></i>
+
+  <div class="facade">
+    <div class="marquee-sign">
+      <div class="sign-name">The Theater</div>
+      <div class="sign-now" id="sign-now">—</div>
+      <div class="sign-when" id="sign-when"></div>
+    </div>
+
+    <div class="facade-wall">
+      <div class="poster-wall" id="posters"></div>
+    </div>
+
+    <div class="frontage">
+      <div class="box-office" id="box-office" title="Buy a seat">
+        <div class="bo-sign">Box Office</div>
+        <div class="bo-window">
+          <span class="bo-price" id="bo-price">$1</span>
+          <i class="bo-grille"></i>
+        </div>
+        <div class="bo-note" id="bo-note">one seat, please</div>
+        <div class="shutter">sold out</div>
+      </div>
+
+      <div class="entrance" id="entrance" title="The doors">
+        <i class="inside"></i>
+        <i class="transom"></i>
+        <div class="door l"></div>
+        <div class="door r"></div>
+        <i class="threshold"></i>
+        <div class="door-label" id="door-label">ticket holders only</div>
+      </div>
+
+      <div class="placard" id="placard"></div>
+    </div>
+  </div>
+
+  <div class="sidewalk" id="sidewalk">
+    <div class="you-are-here" id="street-note">you are standing on the sidewalk</div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="grid">
+    <section class="panel">
+      <h2>On the bill</h2>
+      <ul class="film-list" id="programme"></ul>
+      <p class="lede tiny" id="bill-note"></p>
+    </section>
+
+    <section class="panel">
+      <h2>House rules</h2>
+      <p class="lede">
+        Every film screens <b>once</b>. Everyone watches the same frame at the same second —
+        no pause, no scrub, no replay, no catching up later.
+      </p>
+      <p class="lede">
+        Drop a film in an empty frame out front, or buy a seat at the window. Either way you walk
+        in and sit down. When the house is ready the doors close and a public countdown starts.
+      </p>
+      <p class="lede">
+        Afterwards the audience votes Best Picture. The winner is kept forever in the Hall of Fame;
+        every other print is struck and survives only as a statistic.
+      </p>
+      <p class="lede tiny">The House Manager sizes each theater to real demand — a quiet night gets
+        a small room — and there is a guaranteed showtime every day regardless.</p>
+    </section>
+  </div>
+</div>
+
+<div id="enter-wipe"><b id="wipe-word">This way</b></div>
+
+<script src="/static/js/common.js"></script>
+<script src="/static/js/slate.js"></script>
+<script src="/static/js/avatar.js"></script>
+<script src="/static/js/street.js"></script>
+<script src="/static/js/dev.js"></script>
+</body>
+</html>

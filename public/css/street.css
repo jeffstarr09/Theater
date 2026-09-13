@@ -1,0 +1,351 @@
+/* =============================================================================
+ * OUTSIDE THE THEATER
+ * The first-person front of house: a lit marquee, poster frames you can drop a
+ * film into, a box office window, the doors, and a sidewalk you stand on.
+ * ========================================================================== */
+
+.street {
+  position: relative; z-index: 2;
+  max-width: 1120px; margin: 0 auto 26px;
+  border-radius: 16px; overflow: hidden;
+  background:
+    radial-gradient(120% 90% at 50% 120%, #2a1016 0%, transparent 62%),
+    linear-gradient(180deg, #07050a 0%, #0d0810 52%, #14090e 100%);
+  border: 1px solid var(--line);
+  box-shadow: 0 30px 90px rgba(0,0,0,.65);
+  user-select: none;
+}
+
+/* ---------- night sky + falling light ---------- */
+.street .sky {
+  position: absolute; inset: 0 0 auto; height: 55%; pointer-events: none;
+  background: radial-gradient(80% 120% at 50% 0%, rgba(232,192,125,.14), transparent 65%);
+}
+
+/* ---------- the marquee ---------- */
+.marquee-sign {
+  position: relative; margin: 26px auto 0; max-width: 78%;
+  padding: 20px 30px 18px; text-align: center;
+  background: linear-gradient(180deg, #2b1018, #17090f 70%, #1e0d13);
+  border-radius: 12px 12px 4px 4px;
+  border: 1px solid #4b2a33;
+  box-shadow: 0 18px 60px rgba(232,192,125,.16), inset 0 0 40px rgba(0,0,0,.6);
+}
+/* bulbs all the way round */
+.marquee-sign::before {
+  content: ""; position: absolute; inset: 6px; border-radius: 8px; pointer-events: none;
+  background-image:
+    radial-gradient(circle, #ffe9c0 0 2.5px, transparent 3.2px),
+    radial-gradient(circle, #ffe9c0 0 2.5px, transparent 3.2px),
+    radial-gradient(circle, #ffe9c0 0 2.5px, transparent 3.2px),
+    radial-gradient(circle, #ffe9c0 0 2.5px, transparent 3.2px);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 100%, 0 0, 100% 0;
+  background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
+  filter: drop-shadow(0 0 5px rgba(255,214,140,.85));
+  animation: bulbs 3.2s ease-in-out infinite;
+}
+@keyframes bulbs { 0%,100% { opacity: .95 } 40% { opacity: .62 } 60% { opacity: 1 } }
+
+.sign-name {
+  font-family: var(--serif); font-size: clamp(22px, 3.4vw, 38px); letter-spacing: .3em;
+  text-transform: uppercase; color: #ffe9c0; margin: 0 0 2px;
+  text-shadow: 0 0 26px rgba(255,214,140,.55);
+}
+.sign-now {
+  font-family: var(--mono); font-size: clamp(11px, 1.5vw, 14px); letter-spacing: .34em;
+  text-transform: uppercase; color: var(--red); text-shadow: 0 0 18px rgba(193,18,31,.8);
+}
+.sign-now.filling { color: #ffd479; text-shadow: 0 0 18px rgba(255,212,121,.6); }
+.sign-when {
+  margin-top: 7px; font-size: 11.5px; letter-spacing: .24em; text-transform: uppercase;
+  color: #b08c62;
+}
+.sign-clock { font-family: var(--mono); color: #ffe9c0; letter-spacing: .1em; }
+
+/* ---------- facade ---------- */
+.facade {
+  position: relative; padding: 0 22px 0;
+}
+.facade-wall {
+  margin-top: 18px; padding: 22px 20px 14px;
+  background:
+    linear-gradient(180deg, rgba(255,214,140,.07), transparent 40%),
+    repeating-linear-gradient(90deg, #1a1015 0 46px, #170e13 46px 48px),
+    linear-gradient(180deg, #1a1015, #120b10);
+  border-radius: 10px 10px 0 0;
+  border: 1px solid #30202a; border-bottom: 0;
+}
+
+/* ---------- poster frames ---------- */
+.poster-wall {
+  display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+}
+.poster-frame {
+  position: relative; width: 124px; flex: 0 0 auto;
+  border-radius: 6px; padding: 7px 7px 0;
+  background: linear-gradient(150deg, #6b5124, #3a2a12 45%, #8a6a30);
+  box-shadow: 0 10px 26px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,226,170,.28);
+  transition: transform .2s, box-shadow .2s;
+}
+.poster-frame:hover { transform: translateY(-3px); }
+.poster-frame canvas { width: 100%; aspect-ratio: 2/3; display: block; border-radius: 3px; background: #000; }
+.poster-plate {
+  text-align: center; font-family: var(--mono); font-size: 8.5px; letter-spacing: .16em;
+  text-transform: uppercase; color: #2a1c0c; padding: 5px 2px 4px;
+  background: linear-gradient(180deg, #c8a35c, #9a7a3c);
+  border-radius: 0 0 4px 4px; margin: 6px -7px 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* an empty frame is an invitation */
+.poster-frame.empty {
+  background: transparent;
+  border: 2px dashed #6b5124;
+  box-shadow: none; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  aspect-ratio: 2/3; padding: 10px; text-align: center;
+}
+.poster-frame.empty:hover, .poster-frame.empty.drag-over {
+  border-color: var(--gold); background: rgba(232,192,125,.09);
+  box-shadow: 0 0 30px rgba(232,192,125,.25);
+}
+.poster-frame.empty .plus { font-size: 26px; color: #6b5124; line-height: 1; }
+.poster-frame.empty:hover .plus, .poster-frame.empty.drag-over .plus { color: var(--gold); }
+.poster-frame.empty span {
+  font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: #7d6642; margin-top: 8px; line-height: 1.5;
+}
+.poster-frame.uploading { border-style: solid; border-color: var(--gold); }
+.poster-frame .up-bar { width: 100%; height: 4px; background: #2a1c24; border-radius: 9px; margin-top: 10px; overflow: hidden; }
+.poster-frame .up-bar i { display: block; height: 100%; width: 0; background: var(--gold); transition: width .2s; }
+.poster-frame.mine::after {
+  content: "YOURS"; position: absolute; top: 3px; right: 3px; z-index: 3;
+  background: var(--gold); color: #1a1014; font-size: 8px; font-weight: 700;
+  letter-spacing: .14em; padding: 3px 6px; border-radius: 4px;
+}
+
+/* ---------- box office · doors · placard ---------- */
+.frontage {
+  display: grid; grid-template-columns: 1fr 1.35fr 1fr; gap: 18px; align-items: end;
+  padding: 20px 20px 0;
+  background: linear-gradient(180deg, #160d12, #120a0f);
+  border-left: 1px solid #30202a; border-right: 1px solid #30202a;
+}
+@media (max-width: 760px) { .frontage { grid-template-columns: 1fr; gap: 14px; } }
+
+.box-office {
+  position: relative; border-radius: 8px 8px 0 0; padding: 14px 12px 30px;
+  background: linear-gradient(180deg, #33141b, #1d0d13);
+  border: 1px solid #4b2a33; border-bottom: 0;
+  text-align: center; cursor: pointer; transition: .18s;
+  box-shadow: 0 0 40px rgba(255,196,110,.1);
+}
+.box-office:hover { background: linear-gradient(180deg, #431a23, #241017); box-shadow: 0 0 50px rgba(255,196,110,.28); }
+.box-office .bo-sign {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .3em; color: #ffd479; text-transform: uppercase;
+}
+.box-office .bo-window {
+  margin: 9px auto 8px; height: 62px; border-radius: 5px;
+  background: radial-gradient(80% 100% at 50% 30%, #ffe6b8, #b98a45 60%, #4a3216);
+  box-shadow: inset 0 0 18px rgba(0,0,0,.45), 0 0 26px rgba(255,214,140,.35);
+  display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;
+}
+.box-office .bo-price {
+  font-family: var(--serif); font-size: 24px; color: #3a2410; text-shadow: 0 1px 0 rgba(255,255,255,.35);
+}
+.box-office .bo-grille {
+  position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
+  width: 42px; height: 9px; border-radius: 9px;
+  background: repeating-linear-gradient(90deg, #5a3d1c 0 2px, transparent 2px 5px);
+}
+.box-office .bo-note { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #b08c62; }
+.box-office .shutter {
+  position: absolute; inset: 0; border-radius: 8px 8px 0 0;
+  background: repeating-linear-gradient(180deg, #241820 0 5px, #1b1018 5px 10px);
+  border: 1px solid #3a2630;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .24em; color: #7d6672; text-transform: uppercase;
+  transform-origin: top; transform: scaleY(0); transition: transform .5s cubic-bezier(.5,0,.3,1);
+}
+.box-office.closed .shutter { transform: scaleY(1); }
+.box-office.closed { cursor: default; }
+
+.entrance {
+  position: relative; perspective: 800px; cursor: pointer;
+  height: 208px; border-radius: 8px 8px 0 0; overflow: hidden;
+  border: 1px solid #4b2a33; border-bottom: 0;
+  background: linear-gradient(180deg, #2a1018, #140a10);
+}
+.entrance .inside {
+  position: absolute; inset: 0;
+  background: radial-gradient(70% 100% at 50% 100%, #ffce85 0%, #8a4a1e 35%, #200c12 78%);
+  opacity: .25; transition: opacity .6s;
+}
+.entrance.open .inside { opacity: 1; }
+.entrance .door {
+  position: absolute; top: 20px; bottom: 0; width: 50%;
+  background:
+    linear-gradient(180deg, rgba(255,233,192,.07), transparent 26%),
+    linear-gradient(180deg, #4a1c24, #2a1016);
+  border: 1px solid #6b3340; transition: transform .9s cubic-bezier(.5,0,.2,1);
+  transform-style: preserve-3d;
+  box-shadow: inset 0 0 34px rgba(0,0,0,.55);
+}
+.entrance .door::before {      /* the recessed panel */
+  content: ""; position: absolute; inset: 16px 16px 54px;
+  border: 1px solid rgba(255,226,170,.15); border-radius: 4px;
+  background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(0,0,0,.22));
+  box-shadow: inset 0 1px 0 rgba(255,226,170,.08);
+}
+.entrance .door::after {
+  content: ""; position: absolute; top: 42%; width: 8px; height: 46px; border-radius: 5px;
+  background: linear-gradient(180deg, #ffe9c0, #a37a38);
+  box-shadow: 0 0 10px rgba(255,214,140,.45);
+}
+.entrance .threshold {    /* a strip of carpet reaching the pavement */
+  position: absolute; left: 14%; right: 14%; bottom: 0; height: 20px; z-index: 6;
+  background: linear-gradient(180deg, #6d121d, #37090f);
+  border-radius: 4px 4px 0 0; opacity: .95;
+  box-shadow: 0 -6px 20px rgba(0,0,0,.5);
+}
+.entrance .door.l { left: 0; transform-origin: left center; border-radius: 6px 0 0 0; }
+.entrance .door.l::after { right: 9px; }
+.entrance .door.r { right: 0; transform-origin: right center; border-radius: 0 6px 0 0; }
+.entrance .door.r::after { left: 9px; }
+.entrance.open .door.l { transform: rotateY(-78deg); }
+.entrance.open .door.r { transform: rotateY(78deg); }
+.entrance .door-label {
+  position: absolute; left: 0; right: 0; bottom: 28px; z-index: 7; text-align: center;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .26em; text-transform: uppercase;
+  color: #ffe9c0; text-shadow: 0 2px 10px #000; pointer-events: none;
+}
+.entrance:hover .door.l { transform: rotateY(-22deg); }
+.entrance:hover .door.r { transform: rotateY(22deg); }
+.entrance.open:hover .door.l { transform: rotateY(-82deg); }
+.entrance.open:hover .door.r { transform: rotateY(82deg); }
+.entrance .transom {     /* the lit fanlight over the doors */
+  position: absolute; top: 0; left: 0; right: 0; height: 20px; z-index: 3;
+  background-image:
+    repeating-linear-gradient(90deg, rgba(40,12,10,.8) 0 2px, transparent 2px 30px),
+    linear-gradient(180deg, #ffe0a5, #a2601f);
+  border-bottom: 1px solid #6b3340;
+  box-shadow: 0 6px 22px rgba(255,196,110,.35);
+}
+
+.placard {
+  border-radius: 8px 8px 0 0; padding: 14px 16px 30px; text-align: left;
+  background: linear-gradient(180deg, #1d1118, #140c11);
+  border: 1px solid #3a2630; border-bottom: 0; min-height: 148px;
+}
+.placard h4 {
+  margin: 0 0 8px; font-family: var(--mono); font-size: 9.5px; letter-spacing: .26em;
+  text-transform: uppercase; color: #b08c62;
+}
+.placard p { margin: 0 0 7px; font-size: 12px; line-height: 1.55; color: var(--muted); }
+.placard .big { font-family: var(--serif); font-size: 17px; color: var(--paper); }
+
+/* ---------- sidewalk ---------- */
+.sidewalk {
+  position: relative; height: 126px;
+  background:
+    radial-gradient(60% 80% at 50% 0%, rgba(255,206,133,.16), transparent 70%),
+    linear-gradient(180deg, #241a1e 0 10px, #171013 10px 100%);
+  border-top: 2px solid #3a2c30;
+}
+.sidewalk::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 22px; height: 1px;
+  background: repeating-linear-gradient(90deg, #2e2226 0 30px, transparent 30px 34px);
+}
+.you-are-here {
+  position: absolute; right: 16px; bottom: 7px;
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .22em; text-transform: uppercase;
+  color: #7d6672;
+}
+
+/* ---------- avatars ---------- */
+.avatar {
+  position: absolute; bottom: 30px; z-index: 5;
+  width: calc(27px * var(--scale, 1)); height: calc(58px * var(--scale, 1));
+  transform-origin: bottom center;
+}
+.avatar.mirrored { scale: -1 1; }
+.avatar i { position: absolute; display: block; }
+.avatar::after {   /* the little pool of shadow that puts them on the pavement */
+  content: ""; position: absolute; left: 4%; bottom: -3px; width: 92%; height: 7px;
+  border-radius: 50%; background: radial-gradient(closest-side, rgba(0,0,0,.55), transparent);
+}
+.avatar .head {
+  width: 40%; aspect-ratio: 1; border-radius: 48%; background: var(--skin);
+  left: 30%; top: 3%; box-shadow: inset -1px -2px 3px rgba(0,0,0,.3);
+}
+.avatar .hat {
+  width: 54%; height: 12%; border-radius: 3px 3px 0 0; left: 23%; top: 1%; z-index: 2;
+}
+.avatar .body {          /* shoulders, then a coat that falls straight */
+  width: 80%; height: 48%; left: 10%; top: 25%;
+  border-radius: 48% 48% 14% 14%;
+  background: linear-gradient(180deg, var(--coat), color-mix(in srgb, var(--coat) 72%, #000));
+  box-shadow: inset -2px -2px 6px rgba(0,0,0,.35), 0 1px 0 rgba(255,255,255,.06);
+}
+.avatar .leg {
+  width: 21%; height: 31%; bottom: 0; background: #2c2130; border-radius: 3px 3px 4px 4px;
+  transform-origin: top center; box-shadow: 0 3px 0 -1px #120c16;
+}
+.avatar .leg.l { left: 23% } .avatar .leg.r { right: 23% }
+.avatar.walking .leg.l { animation: step .46s linear infinite; }
+.avatar.walking .leg.r { animation: step .46s linear infinite reverse; }
+.avatar.walking .body { animation: bob .23s ease-in-out infinite alternate; }
+@keyframes step { 0% { transform: rotate(26deg) } 50% { transform: rotate(-26deg) } 100% { transform: rotate(26deg) } }
+@keyframes bob { from { transform: translateY(0) } to { transform: translateY(-1.5px) } }
+
+.avatar.you { filter: drop-shadow(0 0 7px rgba(232,192,125,.75)); }
+.avatar.you .halo {
+  width: 190%; height: 34%; left: -45%; bottom: -10%; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(232,192,125,.6), transparent);
+}
+.avatar.you .body { box-shadow: inset 0 0 0 1.5px rgba(255,233,192,.85), inset -2px -2px 6px rgba(0,0,0,.35); }
+.avatar-label {
+  position: absolute; bottom: 104%; left: 50%; transform: translateX(-50%);
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--gold); white-space: nowrap; text-shadow: 0 2px 8px #000; font-weight: 400;
+}
+.avatar.mirrored .avatar-label { scale: -1 1; }
+
+.avatar.loiterer { animation: drift var(--dur, 9s) ease-in-out var(--delay, 0s) infinite alternate; }
+@keyframes drift { from { transform: translateX(0) } to { transform: translateX(var(--drift, 14px)) } }
+
+/* ---------- entering the building ---------- */
+#enter-wipe {
+  position: fixed; inset: 0; z-index: 90; pointer-events: none;
+  background: radial-gradient(60% 60% at 50% 60%, rgba(255,206,133,.96), #140a10 72%);
+  opacity: 0; transition: opacity .75s ease;
+}
+#enter-wipe.on { opacity: 1; }
+#enter-wipe b {
+  position: absolute; left: 0; right: 0; top: 54%; text-align: center;
+  font-family: var(--serif); font-size: 22px; letter-spacing: .3em; text-transform: uppercase;
+  color: #2a1208; font-weight: 400;
+}
+
+/* ---------- seated crowd (auditorium) ---------- */
+.sitter {          /* the back of somebody's head, two rows down from you */
+  position: absolute; left: 50%; bottom: 58%; transform: translateX(-50%);
+  width: 10px; height: 10px; border-radius: 50% 50% 40% 40%;
+  background: var(--skin, #c98f5f);
+  box-shadow:
+    0 6px 0 -1px var(--coat, #4a3f6b),
+    0 0 0 1px rgba(0,0,0,.5),
+    inset 0 -2px 3px rgba(0,0,0,.35),
+    inset 0 2px 2px rgba(255,255,255,.18);
+}
+.sitter.you {
+  background: #fff3d8;
+  box-shadow:
+    0 6px 0 -1px var(--gold), 0 0 0 1px rgba(0,0,0,.5), 0 0 14px rgba(232,192,125,.95);
+}
+.seat { position: relative; overflow: visible; }
+.seat.taken { background: var(--velvet); border-color: #7d1420; }
+
+/* your avatar walking down the aisle */
+#aisle-walker { position: absolute; z-index: 9; bottom: auto; }
+.seatmap-stage { position: relative; }

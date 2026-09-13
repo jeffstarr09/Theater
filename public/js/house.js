@@ -66,7 +66,8 @@ function render(s) {
 
 function renderPre(s) {
   const st = s.theater.state;
-  renderSeatMap($('#seatmap'), s.seatMap);
+  renderSeatMap($('#seatmap'), s.seatMap, `t${s.theater.number}`);
+  arrivalWalk(s);
   $('#mood').textContent = s.seatMap.mood;
   const actions = $('#pre-actions');
   actions.innerHTML = '';
@@ -76,9 +77,9 @@ function renderPre(s) {
       : 'Ticketless, but you may watch from the back. The doors are closed for this one.';
   } else {
     $('#pre-note').textContent = st === 'OPEN_CALL'
-      ? 'No programme yet. The house is taking submissions — there is a guaranteed showtime regardless.'
-      : 'Still filling. Grab a seat in the lobby, or wait here.';
-    const a = el('a', 'btn', 'Box office');
+      ? 'No programme yet. The frames out front are empty — there is a guaranteed showtime regardless.'
+      : 'Still filling. Buy a seat at the window out front, or wait here.';
+    const a = el('a', 'btn', 'Back outside');
     a.href = '/';
     actions.appendChild(a);
     const b = el('a', 'btn ghost', 'Submit a film');
@@ -127,6 +128,38 @@ function renderProgramme(s) {
     li.appendChild(box);
     ul.appendChild(li);
   });
+}
+
+/* ---------------------------------------------------------------------------
+ * TAKING YOUR SEAT
+ * You came through the doors from the street, so you walk down the aisle and
+ * sit in the chair the box office gave you. Purely cosmetic; nothing waits.
+ * ------------------------------------------------------------------------ */
+let arrived = false;
+async function arrivalWalk(s) {
+  if (arrived || !new URLSearchParams(location.search).has('arrive')) return;
+  if (s.seatMap.youIndex < 0 || $('#pre').style.display === 'none') return;
+  arrived = true;
+  history.replaceState({}, '', '/house');
+
+  const stage = $('#seatmap');
+  const seat = $$('.seat', stage)[s.seatMap.youIndex];
+  if (!seat) return;
+  const sr = stage.getBoundingClientRect(), tr = seat.getBoundingClientRect();
+
+  const me = Avatar.make(s.you.id || 'you', { you: true, scale: 0.62, label: 'you' });
+  me.id = 'aisle-walker';
+  stage.appendChild(me);
+  seat.style.visibility = 'hidden';
+
+  const from = { x: sr.width / 2 - 8, y: sr.height + 14 };
+  const to = { x: tr.left - sr.left + tr.width / 2 - 8, y: tr.top - sr.top - 22 };
+  toast('Down the aisle — the gold seat is yours.');
+  await Avatar.walk(me, from, to, { duration: 1500 });
+  seat.style.visibility = '';
+  me.style.transition = 'opacity .4s';
+  me.style.opacity = '0';
+  setTimeout(() => me.remove(), 450);
 }
 
 /* ---------------------------------------------------------------------------

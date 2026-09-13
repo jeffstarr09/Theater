@@ -26,14 +26,14 @@ app.use(router);
 
 /* Pages. Each is a plain HTML file; no build step, no bundler. */
 const page = (file) => (req, res) => res.sendFile(path.join(PUBLIC, file));
-app.get('/', page('lobby.html'));
+app.get('/', page('street.html'));
 app.get('/house', page('house.html'));
 app.get('/submit', page('submit.html'));
 app.get('/hall', page('hall.html'));
 app.get('/me', page('profile.html'));
 app.get('/admin', page('admin.html'));
 
-app.use((req, res) => res.status(404).sendFile(path.join(PUBLIC, 'lobby.html')));
+app.use((req, res) => res.status(404).sendFile(path.join(PUBLIC, 'street.html')));
 app.use((err, req, res, next) => {
   console.error('[http]', err);
   res.status(500).json({ error: err.message || 'Something went wrong in the projection booth.' });
@@ -53,7 +53,7 @@ server.listen(PORT, () => {
   console.log('  ╔══════════════════════════════════════════════╗');
   console.log('  ║   T H E   T H E A T E R                      ║');
   console.log('  ╚══════════════════════════════════════════════╝');
-  console.log(`  Lobby          http://localhost:${PORT}/`);
+  console.log(`  Out front      http://localhost:${PORT}/`);
   console.log(`  Auditorium     http://localhost:${PORT}/house`);
   console.log(`  Submit a film  http://localhost:${PORT}/submit`);
   console.log(`  Hall of Fame   http://localhost:${PORT}/hall`);

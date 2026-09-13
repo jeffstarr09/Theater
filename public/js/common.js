@@ -121,8 +121,8 @@ class Hall {
  * The server sends a grid of 1s and 0s plus your own seat. It does not send —
  * and cannot be asked for — how many of those seats hold real people.
  * ========================================================================== */
-function renderSeatMap(container, seatMap) {
-  const sig = seatMap.rows.map((r) => r.length).join(',');
+function renderSeatMap(container, seatMap, houseKey = 'h') {
+  const sig = seatMap.rows.map((r) => r.length).join(',') + '|' + houseKey;
   if (container.dataset.sig !== sig) {
     container.dataset.sig = sig;
     container.innerHTML = '';
@@ -142,6 +142,16 @@ function renderSeatMap(container, seatMap) {
     const you = i === seatMap.youIndex;
     s.className = 'seat' + (flat[i] ? ' taken' : '') + (you ? ' you' : '');
     s.title = you ? 'You are here' : '';
+    // Somebody is sitting there. Whose head it is, nobody outside can tell.
+    const had = s.firstChild;
+    if (flat[i] && typeof Avatar !== 'undefined') {
+      if (!had || had.classList.contains('you') !== you) {
+        s.innerHTML = '';
+        s.appendChild(Avatar.seated(`${houseKey}:${i}`, you));
+      }
+    } else if (had) {
+      s.innerHTML = '';
+    }
   });
 }
 
@@ -154,7 +164,7 @@ function mountChrome(active) {
       <h1>The Theater</h1>
     </a>
     <nav class="top-nav">
-      <a href="/" data-k="lobby">Lobby</a>
+      <a href="/" data-k="street">Outside</a>
       <a href="/house" data-k="house">Auditorium</a>
       <a href="/submit" data-k="submit">Submit a film</a>
       <a href="/hall" data-k="hall">Hall of Fame</a>

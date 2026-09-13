@@ -73,7 +73,7 @@ const Slate = (() => {
     grain(ctx, w, h, tMs, 0.045);
   }
 
-  function wrap(ctx, text, cx, cy, maxW, lineH) {
+  function wrap(ctx, text, cx, cy, maxW, lineH, maxLines = 4) {
     const words = String(text || '').split(/\s+/);
     const lines = []; let line = '';
     for (const word of words) {
@@ -81,6 +81,7 @@ const Slate = (() => {
       if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = word; } else line = test;
     }
     if (line) lines.push(line);
+    if (lines.length > maxLines) { lines.length = maxLines; lines[maxLines - 1] += '…'; }
     const start = cy - ((lines.length - 1) * lineH) / 2;
     lines.forEach((l, i) => ctx.fillText(l, cx, start + i * lineH));
   }
@@ -183,5 +184,130 @@ const Slate = (() => {
     if (tMs < 900) { ctx.fillStyle = `rgba(0,0,0,${1 - tMs / 900})`; ctx.fillRect(0, 0, w, h); }
   }
 
-  return { title, film, fit };
+
+  /* --- a poster for the frames out front ------------------------------- */
+  const POSTER_PALETTES = [
+    ['#1a0f1f', '#ff5d73', '#ffd166'], ['#06171c', '#2ec4b6', '#e8f7ee'],
+    ['#1c1209', '#f4a261', '#e76f51'], ['#0b0f2b', '#8ecae6', '#ffb703'],
+    ['#180a0a', '#d62828', '#fcbf49'], ['#10131a', '#c8b6ff', '#ffd6ff'],
+    ['#0a1a12', '#95d5b2', '#f1faee'],
+  ];
+  const MOTIF_NAMES = ['grain', 'bars', 'iris', 'scan', 'orbit', 'rain'];
+
+  function hash(str) {
+    let h = 2166136261;
+    for (let i = 0; i < String(str).length; i++) {
+      h ^= String(str).charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+
+  /* Uploaded films have no slate, so their poster art is derived from the id —
+   * stable, and different for every film. */
+  function artFor(film) {
+    if (film.slate) return film.slate;
+    const h = hash(film.filmId || film.id || film.title || 'x');
+    return {
+      palette: POSTER_PALETTES[h % POSTER_PALETTES.length],
+      motif: MOTIF_NAMES[(h >> 5) % MOTIF_NAMES.length],
+      seed: h,
+    };
+  }
+
+  function poster(canvas, film, opts = {}) {
+    const ctx = canvas.getContext('2d');
+    const { w, h } = fit(canvas);
+    const art = artFor(film);
+    const [bg, mid, hi] = art.palette;
+    const r = rng(art.seed);
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+
+    /* One bold composition, seeded — no motion, this is a printed sheet. */
+    switch (art.motif) {
+      case 'bars':
+        for (let i = 0; i < 7; i++) {
+          ctx.fillStyle = i % 2 ? mid : hi;
+          ctx.globalAlpha = 0.25 + r() * 0.6;
+          const y = h * (0.06 + i * 0.09);
+          ctx.fillRect(w * (r() * 0.4 - 0.1), y, w * (0.5 + r() * 0.7), h * 0.045);
+        }
+        break;
+      case 'iris': {
+        const g = ctx.createRadialGradient(w / 2, h * 0.36, w * 0.04, w / 2, h * 0.36, w * 0.75);
+        g.addColorStop(0, hi); g.addColorStop(0.4, mid); g.addColorStop(1, bg);
+        ctx.fillStyle = g; ctx.fillRect(0, 0, w, h * 0.72);
+        ctx.strokeStyle = 'rgba(0,0,0,.3)'; ctx.lineWidth = w * 0.02;
+        for (let i = 1; i < 5; i++) { ctx.beginPath(); ctx.arc(w / 2, h * 0.36, w * i * 0.13, 0, 6.29); ctx.stroke(); }
+        break;
+      }
+      case 'scan':
+        for (let y = 0; y < h * 0.72; y += Math.max(2, h / 70)) {
+          ctx.fillStyle = (y / h) % 0.18 < 0.09 ? mid : hi;
+          ctx.globalAlpha = 0.12 + (y / h) * 0.7;
+          ctx.fillRect(0, y, w, Math.max(1.5, h / 150));
+        }
+        break;
+      case 'orbit':
+        for (let i = 0; i < 18; i++) {
+          ctx.fillStyle = i % 3 ? mid : hi;
+          ctx.globalAlpha = 0.3 + r() * 0.6;
+          ctx.beginPath();
+          ctx.arc(w * r(), h * r() * 0.72, w * (0.02 + r() * 0.12), 0, 6.29);
+          ctx.fill();
+        }
+        break;
+      case 'rain':
+        for (let i = 0; i < 46; i++) {
+          ctx.strokeStyle = i % 4 ? mid : hi;
+          ctx.globalAlpha = 0.25 + r() * 0.6;
+          ctx.lineWidth = Math.max(1, w * 0.012);
+          const x = w * r(), y = h * r() * 0.7;
+          ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + w * 0.04, y + h * 0.09); ctx.stroke();
+        }
+        break;
+      default: {
+        const g = ctx.createLinearGradient(0, 0, w, h * 0.8);
+        g.addColorStop(0, mid); g.addColorStop(1, bg);
+        ctx.fillStyle = g; ctx.fillRect(0, 0, w, h * 0.72);
+        ctx.fillStyle = hi; ctx.globalAlpha = 0.5;
+        ctx.beginPath(); ctx.arc(w * 0.62, h * 0.26, w * 0.22, 0, 6.29); ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    /* Type block. */
+    const scrim = ctx.createLinearGradient(0, h * 0.48, 0, h);
+    scrim.addColorStop(0, 'rgba(0,0,0,0)'); scrim.addColorStop(0.45, 'rgba(0,0,0,.88)'); scrim.addColorStop(1, '#000');
+    ctx.fillStyle = scrim; ctx.fillRect(0, h * 0.48, w, h * 0.52);
+
+    ctx.textAlign = 'center';
+    const size = Math.max(9, Math.round(w * 0.115));
+    ctx.font = `${size}px Georgia, serif`;
+    ctx.fillStyle = '#f4ece2';
+    wrap(ctx, film.title || 'Untitled', w / 2, h * 0.775, w * 0.86, size * 1.16, 3);
+    ctx.font = `${Math.round(w * 0.058)}px ui-sans-serif, system-ui, sans-serif`;
+    ctx.fillStyle = '#e8c07d';
+    ctx.fillText(`A FILM BY ${String(film.by || 'ANON').toUpperCase()}`.slice(0, 34), w / 2, h * 0.935);
+
+    if (opts.order) {
+      ctx.textAlign = 'left';
+      ctx.fillStyle = 'rgba(244,236,226,.75)';
+      ctx.font = `${Math.round(w * 0.055)}px ui-monospace, monospace`;
+      ctx.fillText(`NO. ${String(opts.order).padStart(2, '0')}`, w * 0.06, h * 0.075);
+    }
+    if (opts.badge) {
+      ctx.save();
+      ctx.translate(w * 0.5, h * 0.3); ctx.rotate(-0.34);
+      ctx.fillStyle = 'rgba(193,18,31,.92)';
+      ctx.fillRect(-w * 0.62, -h * 0.035, w * 1.24, h * 0.07);
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+      ctx.font = `${Math.round(w * 0.06)}px ui-monospace, monospace`;
+      ctx.fillText(opts.badge.toUpperCase(), 0, h * 0.018);
+      ctx.restore();
+    }
+    grain(ctx, w, h, art.seed % 1000, 0.05);
+  }
+
+  return { title, film, poster, fit, artFor };
 })();
